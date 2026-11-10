@@ -207,6 +207,8 @@ table.pt{width:100%;border-collapse:collapse;border:2px solid var(--paperLine);t
 .pt td.stamp.ask{opacity:.55}
 .pname span{font-family:var(--pen);font-size:28px;color:var(--ink);border-bottom:1.5px solid #333;padding:0 6px;min-width:110px;display:inline-block}
 .top .wrap{display:flex;justify-content:space-between;align-items:center}
+.top .who>div{width:fit-content;max-width:100%}
+.top{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 .rolep{border:0;background:#fff;color:var(--trust);border-radius:20px;padding:6px 13px;font-size:12px;font-weight:700}
 body.lead .rolep{background:var(--green);color:#fff}
 body.lead .top{background:#001A3D}
@@ -2052,7 +2054,10 @@ if(S.lang && S.lang!=="ko"){ document.documentElement.lang = S.lang; trTree(docu
 
 /* ===== 관리자 (회사 단위) ===== */
 let adminOn = false, ataps = 0, atT, admT = null;
-document.getElementById("teamName").onclick = ()=>{
+/* 관리자 들어가기: 맨 위 파란 줄에서 왼쪽 이름 글자 말고, 오른쪽 빈 곳을 5번 (버튼은 제외).
+   왼쪽 글자를 누르면 폰이 검색 등을 띄워서 옮겼어요. 조장 화면은 오른쪽에 버튼이 있어서 이름과 버튼 사이 빈 곳이에요. */
+document.querySelector("header.top").onclick = ev=>{
+  if(ev.target.closest("button,a,input,#teamName,#meName")) return;
   ataps++; clearTimeout(atT); atT = setTimeout(()=>ataps = 0, 1500);
   if(ataps>=5){ ataps = 0; admT = null; admTab = "home"; adminOn ? go("admin") : adminLogin(); }
 };
