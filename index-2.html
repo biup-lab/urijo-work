@@ -2140,7 +2140,15 @@ function adminLogin(){
 /* 예전 테스트로 생긴 "테스트조"·"가상조원"은 관리자 화면에서 지워요 (대표님 요청). 서버에 남아 있어도 관리자 화면엔 안 보여요. */
 /* 관리자가 지운 조: 서버에 기록이 남아 있어도 관리자 화면에 다시 나타나지 않게 기억해요 (설정 > 지운 조 다시 보이기) */
 const hidT = (name, tid)=>{ const H = (S.co && S.co.hidden)||[], nz = x=>String(x||"").replace(/\s/g,""); return H.some(h=>(tid && h.tid===tid) || (nz(h.name) && nz(h.name)===nz(name))); };
-function hideFilter(){ if(!SH.all) return; SH.all.rows = (SH.all.rows||[]).filter(r=>!hidT(r.team, r.tid)); SH.all.members = (SH.all.members||[]).filter(m=>!hidT(m.team, m.tid)); }
+/* 한 번만: 그동안 테스트로 생긴 조 정리 — 박명현조만 남기고 숨김 (이 날 이후 새로 만든 조는 그대로 보여요) */
+const KEEP_T = "박명현조", CLEAN_AT = Date.parse("2026-11-11T07:00:00+09:00");
+function cleanOld(){ const C = S.co; if(!C || C.clean1) return; const nz = x=>String(x||"").replace(/\s/g,""), H = C.hidden = C.hidden||[];
+  const hide = (name, tid)=>{ if(!name || nz(name)===nz(KEEP_T) || hidT(name, tid)) return; H.push({name, tid:tid||"", at:Date.now()}); };
+  C.teams.forEach(t=>{ if(t.id!==S.myTeam && !t.tid) hide(t.name, ""); });   // 서버에 없는(이 컴퓨터에만 있는) 조
+  if(SH.all){ (SH.all.members||[]).forEach(m=>{ if((m.at||0) < CLEAN_AT) hide(m.team, m.tid); });
+    (SH.all.rows||[]).forEach(r=>{ if((r.at||0) < CLEAN_AT && !(SH.all.members||[]).some(m=>m.tid===r.tid && (m.at||0) >= CLEAN_AT)) hide(r.team, r.tid); }); C.clean1 = true; }
+  C.teams = C.teams.filter(t=>t.id===S.myTeam || !hidT(t.name, t.tid)); shKeep(); }
+function hideFilter(){ if(!SH.all) return; cleanOld(); SH.all.rows = (SH.all.rows||[]).filter(r=>!hidT(r.team, r.tid)); SH.all.members = (SH.all.members||[]).filter(m=>!hidT(m.team, m.tid)); }
 const JUNK_T = x=>String(x||"").replace(/\s/g,"")==="테스트조", JUNK_N = x=>String(x||"").replace(/\s/g,"")==="가상조원";
 function admClean(){ const C = S.co; if(!C || !C.teams) return; let ch = false;
   C.teams.forEach(t=>{ const n = t.crew.length; t.crew = t.crew.filter(p=>!JUNK_N(p.n)); if(t.crew.length!==n) ch = true; });
@@ -2148,8 +2156,9 @@ function admClean(){ const C = S.co; if(!C || !C.teams) return; let ch = false;
   const keep = C.teams.filter(t=>!JUNK_T(t.name)); if(keep.length!==C.teams.length) ch = true;
   if(junkMine){ const t = newTeam(""); keep.push(t); S.myTeam = t.id;                 // 이 컴퓨터의 테스트 기록도 비워요 (다른 조로 기록이 올라가지 않게)
     S.name = ""; S.leader = null; S.rec = {}; S.memo = {}; S.shq = {}; S.shp = {}; S.shAt = {}; delete S.fbJoined; }
-  C.teams = keep; if(ch) shKeep(); }
-function renderAdmin(){ admClean(); const all = ADM_ALL = S.co.teams; S.co.teams = all.filter(t=>t.name || t.crew.length);   // 이름 없는 빈 조(이 컴퓨터용)는 관리자 목록에서 숨겨요
+  C.teams = keep.filter(t=>t.id===S.myTeam || !hidT(t.name, t.tid)); if(C.teams.length!==keep.length) ch = true;   // 지운 조는 늘 안 보이게
+  if(ch) shKeep(); }
+function renderAdmin(){ admClean(); cleanOld(); const all = ADM_ALL = S.co.teams; S.co.teams = all.filter(t=>t.name || t.crew.length);   // 이름 없는 빈 조(이 컴퓨터용)는 관리자 목록에서 숨겨요
   try{ if(admT && !S.co.teams.some(t=>t.id===admT)) admT = null; admT ? renderAdminTeam() : renderAdminCo(); } finally { S.co.teams = all; ADM_ALL = null; } admBar(); window.scrollTo(0,0); }
 /* 관리자 화면 맨 위 연결 상태 한 줄 (연하게) */
 function admState(){ const a = SH.adSt; if(!shOn() || SH.admNeed || !a) return "";
