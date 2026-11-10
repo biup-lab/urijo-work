@@ -2138,6 +2138,9 @@ function adminLogin(){
   openDim(); setTimeout(()=>document.getElementById("apw").focus(),80);
 }
 /* 예전 테스트로 생긴 "테스트조"·"가상조원"은 관리자 화면에서 지워요 (대표님 요청). 서버에 남아 있어도 관리자 화면엔 안 보여요. */
+/* 관리자가 지운 조: 서버에 기록이 남아 있어도 관리자 화면에 다시 나타나지 않게 기억해요 (설정 > 지운 조 다시 보이기) */
+const hidT = (name, tid)=>{ const H = (S.co && S.co.hidden)||[], nz = x=>String(x||"").replace(/\s/g,""); return H.some(h=>(tid && h.tid===tid) || (nz(h.name) && nz(h.name)===nz(name))); };
+function hideFilter(){ if(!SH.all) return; SH.all.rows = (SH.all.rows||[]).filter(r=>!hidT(r.team, r.tid)); SH.all.members = (SH.all.members||[]).filter(m=>!hidT(m.team, m.tid)); }
 const JUNK_T = x=>String(x||"").replace(/\s/g,"")==="테스트조", JUNK_N = x=>String(x||"").replace(/\s/g,"")==="가상조원";
 function admClean(){ const C = S.co; if(!C || !C.teams) return; let ch = false;
   C.teams.forEach(t=>{ const n = t.crew.length; t.crew = t.crew.filter(p=>!JUNK_N(p.n)); if(t.crew.length!==n) ch = true; });
@@ -2462,7 +2465,8 @@ function renderAdminTeam(){
   document.querySelectorAll("[data-ai]").forEach(b=>b.onclick=()=>adminMem(T,+b.dataset.ai));
   if(q("adUse")) q("adUse").onclick = ()=>{ S.myTeam = T.id; S.leader = null; cat = "me"; save(); applyRole(); renderAdmin(); toast(`이 폰을 ${T.name}로 바꿨어요`); };
   if(q("adPw")) q("adPw").onclick = ()=>{ if(!confirmDel("pw"+T.id)) return; delete T.lpw; if(T.id===S.team.id){ S.leader = null; cat = "me"; } save(); renderAdmin(); toast("조장 비밀번호를 지웠어요"); };
-  if(q("adDelT")) q("adDelT").onclick = ()=>{ if(!confirmDel("del"+T.id)) return; C.teams = C.teams.filter(t=>t.id!==T.id); if(S.myTeam===T.id){ S.myTeam = C.teams[0].id; S.leader = null; cat = "me"; } admT = null; admTab = "org"; save(); applyRole(); renderAdmin(); toast("조를 삭제했어요"); };
+  if(q("adDelT")) q("adDelT").onclick = ()=>{ if(!confirmDel("del"+T.id)) return; C.teams = C.teams.filter(t=>t.id!==T.id);
+    if(T.id!==S.myTeam){ C.hidden = (C.hidden||[]).filter(h=>h.name!==T.name).concat([{name:T.name, tid:T.tid||"", at:Date.now()}]); hideFilter(); } if(S.myTeam===T.id){ S.myTeam = C.teams[0].id; S.leader = null; cat = "me"; } admT = null; admTab = "org"; save(); applyRole(); renderAdmin(); toast("조를 삭제했어요"); };
 }
 function natModal(T, i){
   const p = T.crew[i];
@@ -2519,10 +2523,13 @@ function adminSettings(){
   const sh = document.getElementById("sheet");
   sh.innerHTML = `<h3>설정</h3><p>자주 쓰지 않는 기능이에요.</p>
     <button class="adbtn" id="apwc" style="margin-top:0">관리자 비밀번호 바꾸기</button>
+    ${(S.co.hidden||[]).length?`<button class="adbtn" id="unh">지운 조 다시 보이기 (${S.co.hidden.length}개)</button>`:""}
     <button class="close" id="cls">닫기</button>
     <div style="text-align:center;margin-top:14px"><button class="lnk quiet" id="rst">데이터 초기화</button></div>`;
   document.getElementById("cls").onclick = closeDim;
   document.getElementById("rst").onclick = resetSheet;
+  const uh = document.getElementById("unh"); if(uh) uh.onclick = ()=>modal("지운 조 다시 보이기", "누르면 그 조가 관리자 화면에 다시 나타나요.", S.co.hidden.map((h,i)=>({v:String(i), l:h.name, full:1})), v=>{
+    const h = S.co.hidden.splice(+v,1)[0]; save(); closeDim(); toast(`${h.name}를 다시 보이게 했어요`); shPullAll(); });
   document.getElementById("apwc").onclick = ()=>{
     sh.innerHTML = `<h3>관리자 비밀번호 바꾸기</h3><p>새 비밀번호를 4자리 이상 넣어주세요.</p><input id="npw" type="password" inputmode="numeric" maxlength="12" placeholder="새 비밀번호"><button class="opt full" id="npws" style="width:100%;margin-top:10px;background:var(--trust);color:#fff;border-color:var(--trust)">바꾸기</button><button class="close" id="cls">닫기</button>`;
     document.getElementById("cls").onclick = closeDim;
@@ -2733,7 +2740,7 @@ async function shPullAll(){
     if(r.status==="rejected" && m.status==="rejected") throw r.reason;
     const rows = r.status==="fulfilled" ? r.value.docs.map(d=>d.data()).filter(x=>x.date>=from && x.code) : [];
     const mem = m.status==="fulfilled" ? m.value.docs.map(d=>d.data()) : [];
-    SH.all = {ok:true, rows:rows.filter(x=>!JUNK_T(x.team) && !JUNK_N(x.name)), members:mem.filter(x=>x.tid && !JUNK_T(x.team) && !JUNK_N(x.name))}; SH.err = false; shMergeAll(); if(view==="admin") renderAdmin();
+    SH.all = {ok:true, rows:rows.filter(x=>!JUNK_T(x.team) && !JUNK_N(x.name)), members:mem.filter(x=>x.tid && !JUNK_T(x.team) && !JUNK_N(x.name))}; SH.err = false; hideFilter(); shMergeAll(); if(view==="admin") renderAdmin();
   }catch(e){ SH.err = true; SH.adSt = {at:Date.now(), who:(FB.aauth&&FB.aauth.currentUser&&FB.aauth.currentUser.email)||"", recs:"deny", mem:"deny", fail:!/permission/i.test(String(e&&(e.code||e.message)))}; console.warn("[admin]", e && e.message); if(view==="admin") renderAdmin(); }
   shStatus();
 }
