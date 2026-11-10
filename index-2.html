@@ -875,6 +875,22 @@ table.st{width:100%;border-collapse:collapse;font-size:14px;min-width:560px}
 .tcard .qsub{margin:0 0 30px;line-height:1.6}
 .tcard .meal1{opacity:.5}
 .testb{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 2px);transform:translateX(-50%);z-index:40;background:#FFE9A8;color:#6B4E00;font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:0 0 8px 8px;pointer-events:none;white-space:nowrap}
+
+/* ===== 하단: 한국어·제작 표기를 탭 바로 위 한 줄로, 메인 박스는 그만큼 길게 ===== */
+body{padding-bottom:calc(70px + env(safe-area-inset-bottom,0px))}
+body.wide{padding-bottom:0}
+.credit{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:0 10px;margin:10px 0 4px}
+.credit .shst{flex:1 0 100%;margin:0}
+.credit .langf{margin:0;padding:4px 6px;font-size:11px}
+#v-today:not([hidden]){min-height:calc(100vh - 172px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));min-height:calc(100dvh - 172px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
+.tcard{padding:28px 22px 30px}
+.tcard .wx{margin-bottom:18px}
+.tcard .tdh{margin:0 0 30px}
+.tcard .tdh,.tcard>.td:first-child{padding-top:34px}
+.tcard .pick{gap:14px;min-height:180px!important;max-height:300px}
+.tcard .etc{margin-top:22px}
+.tcard .saved{margin-top:22px}
+.tcard .thint{padding-top:34px}
 </style>
 </head>
 <body>
