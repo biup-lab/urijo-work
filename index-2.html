@@ -919,6 +919,16 @@ body.wide{padding-bottom:0}
 .vab{position:fixed;left:50%;transform:translateX(-50%);top:calc(8px + env(safe-area-inset-top,0px));z-index:60;display:flex;align-items:center;gap:12px;background:#FFF4E5;color:#7A4B00;border-radius:14px;padding:8px 8px 8px 14px;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.12);white-space:nowrap}
 .vab button{border:0;background:#7A4B00;color:#fff;border-radius:10px;padding:7px 11px;font-size:13px;font-weight:700}
 body.viewas .top{padding-top:56px}
+.wklist{margin-top:14px;background:var(--card);border-radius:20px;padding:16px 16px 6px}
+.wklist h2{margin:0 0 6px;font-size:16px;font-weight:700}
+.wkd{padding:12px 0;border-top:1px solid var(--line)}
+.wklist h2+.wkd{border-top:0}
+.wkh{font-size:15px;font-weight:600;margin-bottom:6px}
+.wkh b{color:var(--discovery);margin-left:6px}
+.wkr{display:flex;gap:10px;font-size:15px;line-height:1.6}
+.wkr span{flex:none;width:34px;color:var(--sub);font-size:13px;padding-top:2px}
+.wkr p{margin:0;color:var(--text);word-break:keep-all}
+.wkr.q p{color:#B0B8C1}
 .admst{margin:10px 16px 0;font-size:12.5px;color:var(--sub);text-align:right}
 /* 쉬는 날 계획: 우리 조 쉬는 날 */
 .crewoff{margin-top:28px;background:var(--card);border-radius:20px;padding:20px 18px 8px}
@@ -1659,13 +1669,26 @@ function teamMonth(){
   const lv = teamLeaves(y,m), by = {}; lv.forEach(x=>(by[x.k]=by[x.k]||[]).push(x));
   let cells = ""; for(let i=0;i<off;i++) cells += "<div></div>";
   for(let i=1;i<=dim;i++){ const d = mk(y,m,i), k = ymd(d), dw = d.getDay(), h = HOL[k], n = (by[k]||[]).length;
-    cells += `<button class="cell ${dw===6&&!h?"sat":""} ${(dw===0||h)?"red":""} ${k===t?"today":""} ${n?"lv":""}" data-day="${k}"><span class="n">${i}</span>${n?`<span class="chip c-m">${n}명</span>`:""}</button>`; }
+    const wkn = isRest(d,k) ? Object.values(wkOf(k)).filter(v=>v==="w").length : 0;
+    cells += `<button class="cell ${dw===6&&!h?"sat":""} ${(dw===0||h)?"red":""} ${k===t?"today":""} ${n?"lv":""}" data-day="${k}"><span class="n">${i}</span>${n?`<span class="chip c-m">${n}명</span>`:wkn?`<span class="chip c-w">출근 ${wkn}</span>`:""}</button>`; }
   const days = Object.keys(by).sort().map(k=>{ const d = new Date(k+"T00:00:00");
     return `<div class="mday"><div class="mdl">${d.getDate()}일 <span>${DOW[d.getDay()]}</span></div><div class="mdn">${by[k].map(x=>{ const pend = !x.by && !x.ok && x.at, wait = x.by && !x.cok; return `<button class="mchip ${pend?"pend":""}" data-k="${k}" data-n="${esc(x.n)}">${esc(x.n)}${pend?"<i>확인 전</i>":wait?"<i class=\"w\">본인 확인 전</i>":x.at?"<i class=\"ok\">✓</i>":""}</button>`; }).join("")}</div></div>`; }).join("");
   return `<div class="mnav"><button id="tmp" aria-label="이전 달">‹</button><b>${y}년 ${m+1}월 쉬는 날</b><button id="tmn" aria-label="다음 달">›</button></div>
     <div class="cal"><div class="wk"><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div><div>일</div></div><div class="grid">${cells}</div></div>
     <div class="mlist">${days || '<div class="empty">이번 달엔 쉬는 사람이 없어요.</div>'}</div>
+    ${wkList(y,m)}
     <p class="subl">날짜를 누르면 조원별로 쉬는 날을 정할 수 있어요. 정한 내용은 그 조원 화면에도 같이 들어가요. 아래 이름을 누르면 종류와 사유가 보여요.</p>`;
+}
+/* 주말·공휴일 출근 현황 (조장 화면) */
+function wkOf(k){ const o = {...((S.team.wkp||{})[k]||{})}; const r = S.rec[k]; if(S.name){ if(r==="w"||r==="o") o[S.name] = r; else delete o[S.name]; } return o; }
+function wkList(y,m){
+  const dim = mk(y,m+1,0).getDate(), out = [], all = S.team.crew.map(p=>p.n); if(S.name && !all.includes(S.name)) all.unshift(S.name);
+  for(let i=1;i<=dim;i++){ const d = mk(y,m,i), k = ymd(d); if(!isRest(d,k)) continue; const o = wkOf(k);
+    const w = all.filter(n=>o[n]==="w"), r = all.filter(n=>o[n]==="o"), u = all.filter(n=>!o[n]);
+    if(!w.length && !r.length) continue;
+    out.push(`<div class="wkd"><div class="wkh">${d.getDate()}일 ${DOW[d.getDay()]}${HOL[k]?` · ${HOL[k][0]}`:""} <b>출근 ${w.length}명</b></div>
+      <div class="wkr"><span>출근</span><p>${w.map(esc).join(", ")||"없음"}</p></div><div class="wkr"><span>쉼</span><p>${r.map(esc).join(", ")||"없음"}</p></div>${u.length?`<div class="wkr q"><span>미정</span><p>${u.map(esc).join(", ")}</p></div>`:""}</div>`); }
+  return out.length ? `<section class="wklist"><h2>주말 출근</h2>${out.join("")}</section>` : "";
 }
 function leaveInfo(k,n){
   const x = teamLeaves(+k.slice(0,4), +k.slice(5,7)-1).find(o=>o.k===k && o.n===n); if(!x) return;
@@ -2148,7 +2171,7 @@ function cleanOld(){ const C = S.co; if(!C || C.clean1) return; const nz = x=>St
   if(SH.all){ (SH.all.members||[]).forEach(m=>{ if((m.at||0) < CLEAN_AT) hide(m.team, m.tid); });
     (SH.all.rows||[]).forEach(r=>{ if((r.at||0) < CLEAN_AT && !(SH.all.members||[]).some(m=>m.tid===r.tid && (m.at||0) >= CLEAN_AT)) hide(r.team, r.tid); }); C.clean1 = true; }
   C.teams = C.teams.filter(t=>t.id===S.myTeam || !hidT(t.name, t.tid)); shKeep(); }
-function hideFilter(){ if(!SH.all) return; cleanOld(); SH.all.rows = (SH.all.rows||[]).filter(r=>!hidT(r.team, r.tid)); SH.all.members = (SH.all.members||[]).filter(m=>!hidT(m.team, m.tid)); }
+function hideFilter(){ if(!SH.all) return; cleanOld(); SH.all.teams = (SH.all.teams||[]).filter(t=>!hidT(t.name, t.tid)); SH.all.rows = (SH.all.rows||[]).filter(r=>!hidT(r.team, r.tid)); SH.all.members = (SH.all.members||[]).filter(m=>!hidT(m.team, m.tid)); }
 const JUNK_T = x=>String(x||"").replace(/\s/g,"")==="테스트조", JUNK_N = x=>String(x||"").replace(/\s/g,"")==="가상조원";
 function admClean(){ const C = S.co; if(!C || !C.teams) return; let ch = false;
   C.teams.forEach(t=>{ const n = t.crew.length; t.crew = t.crew.filter(p=>!JUNK_N(p.n)); if(t.crew.length!==n) ch = true; });
@@ -2165,7 +2188,7 @@ function admState(){ const a = SH.adSt; if(!shOn() || SH.admNeed || !a) return "
   if(a.fail) return "서버에 연결하지 못했어요 · 인터넷을 확인해 주세요";
   if(a.recs==="deny" && a.mem==="deny") return `${a.who} 계정은 서버에서 읽기가 막혀 있어요 · 권한 설정이 필요해요`;
   const T = new Set((SH.all&&SH.all.members||[]).map(x=>x.tid)), n = (SH.all&&SH.all.rows||[]).length;
-  return `서버 연결됨 · 조 ${T.size}개 · 기록 ${n}건${a.recs?" · 기록 읽기 막힘":""}${a.mem?" · 명단 읽기 막힘":""} · ${a.who}`; }
+  return `서버 연결됨 · 조 ${T.size}개 · 기록 ${n}건${a.recs?" · 기록 읽기 막힘":""}${a.mem?" · 가입자 읽기 막힘":""}${a.tms?" · 조장 명단 읽기 막힘":""} · ${a.who}`; }
 function admBar(){ const st = admState(); if(st && !SH.admNeed){ const v0 = document.getElementById("v-admin"), d0 = document.createElement("div");
     d0.className = "admst"; d0.textContent = st; v0.prepend(d0); }
   if(!SH.admNeed) return; const v = document.getElementById("v-admin"), d = document.createElement("div");
@@ -2694,6 +2717,7 @@ async function shFlush(){
       await withTO(b.commit(), 15000);
       part.forEach(r=>{ if(S.shq[r.id] && S.shq[r.id].at===r.at) delete S.shq[r.id]; });
     }
+    try{ await rosterPush(); }catch(e){ console.warn("[roster]", e && e.message); }   // 조장: 명단을 서버로
     const oks = Object.entries(S.okq||{});                       // 조장 확인 표시 (조원 기록에 덧붙임)
     if(oks.length){
       const {writeBatch, doc} = FB.m, b = writeBatch(FB.db);
@@ -2707,13 +2731,28 @@ async function shFlush(){
   if(!SH.err && (Object.keys(S.shq||{}).length || Object.keys(S.okq||{}).length)) shFlushSoon();
   else if(SH.err){ clearTimeout(SH.retry); SH.retry = setTimeout(shFlush, 20000); }
 }
+/* 조장 폰의 명단(이름·조장/부조장·특이사항·요일 고정)을 서버 조 문서에 — 관리자·조원 화면이 같은 명단을 봐요 */
+const rosterOf = t => t.crew.map(p=>{ const o = {n:p.n}; if(p.role) o.role = p.role; if(p.sub) o.sub = true; if(p.note) o.note = p.note; if(p.fixed && Object.keys(p.fixed).length) o.fixed = p.fixed; if(p.nat) o.nat = p.nat; return o; });
+async function rosterPush(){
+  if(!isLeader() || !shTid()) return; const crew = rosterOf(S.team), sig = JSON.stringify([shTeam(), crew]);
+  if(S.rosterSig===sig) return;
+  await withTO(FB.m.setDoc(FB.m.doc(FB.db, "u2teams", shTid()), {name:shTeam(), crew, crewBy:S.name, crewAt:Date.now(), ...(S.team.own?{leaderUid:FB.auth.currentUser.uid}:{})}, {merge:true}), 15000);
+  S.rosterSig = sig; shKeep(); }
+/* 조원 폰: 조장님 명단 받아오기 (우리 조 쉬는 날 목록 등) */
+async function rosterPull(){
+  if(isLeader() || !shTid()) return;
+  const sn = await withTO(FB.m.getDoc(FB.m.doc(FB.db, "u2teams", shTid())), 15000); if(!sn.exists()) return;
+  const R = (sn.data()||{}).crew; if(!Array.isArray(R) || !R.length) return;
+  const old = S.team.crew, me = S.name, next = R.map(x=>{ const o = old.find(p=>p.n===x.n)||{}; return {n:x.n, r:o.r||"", ...(o.reason?{reason:o.reason}:{}), ...(x.role?{role:x.role}:{}), ...(x.sub?{sub:true}:{})}; });
+  old.forEach(p=>{ if(!next.some(x=>x.n===p.n) && p.n===me) next.push(p); });
+  if(JSON.stringify(next)!==JSON.stringify(old)){ S.team.crew = next; shKeep(); shRerender(); } }
 /* 우리 조 기록 실시간으로 듣기 → 조장 화면·달력·새 소식에 반영 */
 async function shPull(){
   if(!shOn() || !S.name || !S.team || SH.pulling) return; SH.pulling = true;
   try{
     shFlush();
     if(!await fbJoin()) throw new Error("no team");
-    mealPull();
+    mealPull(); rosterPull().catch(e=>console.warn("[roster]", e && e.message));
     const months = yms(shFrom(), 6), key = shTid()+"|"+months.join(",");
     if(FB.lk !== key){
       FB.un.forEach(u=>u()); FB.un = []; FB.lk = key;
@@ -2743,13 +2782,14 @@ async function shPullAll(){
     SH.admNeed = false;
     const {collection, collectionGroup, query, where, getDocs} = FB.m;
     const from = ymd(workDays()[0] || new Date()), months = yms(from, 3);
-    const [r, m] = await Promise.allSettled([withTO(getDocs(query(collection(FB.adb, "u2recs"), where("ym","in",months))), 20000), withTO(getDocs(collectionGroup(FB.adb, "members")), 20000)]);
+    const [r, m, tm] = await Promise.allSettled([withTO(getDocs(query(collection(FB.adb, "u2recs"), where("ym","in",months))), 20000), withTO(getDocs(collectionGroup(FB.adb, "members")), 20000), withTO(getDocs(collection(FB.adb, "u2teams")), 20000)]);
     const why = x=>x.status==="rejected" ? (/permission/i.test(String(x.reason&&(x.reason.code||x.reason.message)))?"deny":"fail") : "";
-    SH.adSt = {at:Date.now(), who:FB.aauth.currentUser.email||"", recs:why(r), mem:why(m)};
+    SH.adSt = {at:Date.now(), who:FB.aauth.currentUser.email||"", recs:why(r), mem:why(m), tms:why(tm)};
     if(r.status==="rejected" && m.status==="rejected") throw r.reason;
     const rows = r.status==="fulfilled" ? r.value.docs.map(d=>d.data()).filter(x=>x.date>=from && x.code) : [];
     const mem = m.status==="fulfilled" ? m.value.docs.map(d=>d.data()) : [];
-    SH.all = {ok:true, rows:rows.filter(x=>!JUNK_T(x.team) && !JUNK_N(x.name)), members:mem.filter(x=>x.tid && !JUNK_T(x.team) && !JUNK_N(x.name))}; SH.err = false; hideFilter(); shMergeAll(); if(view==="admin") renderAdmin();
+    const tms = tm.status==="fulfilled" ? tm.value.docs.map(d=>({tid:d.id, ...d.data()})).filter(x=>x.name && !JUNK_T(x.name)) : [];
+    SH.all = {ok:true, rows:rows.filter(x=>!JUNK_T(x.team) && !JUNK_N(x.name)), members:mem.filter(x=>x.tid && !JUNK_T(x.team) && !JUNK_N(x.name)), teams:tms}; SH.err = false; hideFilter(); shMergeAll(); if(view==="admin") renderAdmin();
   }catch(e){ SH.err = true; SH.adSt = {at:Date.now(), who:(FB.aauth&&FB.aauth.currentUser&&FB.aauth.currentUser.email)||"", recs:"deny", mem:"deny", fail:!/permission/i.test(String(e&&(e.code||e.message)))}; console.warn("[admin]", e && e.message); if(view==="admin") renderAdmin(); }
   shStatus();
 }
@@ -2763,6 +2803,13 @@ function shMergeAll(){
     let p = t.crew.find(x=>x.n===name); if(!p){ p = {n:name, r:""}; t.crew.push(p); ch = true; }
     if(role==="조장" && !lead(t)){ p.role = "leader"; ch = true; }
     if(!p.nat && NAT[lang]){ p.nat = NAT[lang]; ch = true; } };
+  // 조장 폰 명단이 있으면 그 명단 그대로 (이름·조장/부조장·특이사항·요일 고정). 국적은 관리자가 정한 게 우선.
+  (SH.all.teams||[]).forEach(T=>{ if(!Array.isArray(T.crew) || !T.crew.length) return;
+    let t = find(T.tid, T.name); if(!t){ t = newTeam(T.name); t.tid = T.tid; C.teams.push(t); } else if(!t.tid && t.id!==S.myTeam) t.tid = T.tid;
+    if(t.id===S.myTeam) return;
+    const next = T.crew.map(x=>{ const o = t.crew.find(p=>p.n===x.n)||{}; const q = {n:x.n, r:o.r||""};
+      if(x.role) q.role = x.role; if(x.sub) q.sub = true; if(x.note) q.note = x.note; if(x.fixed) q.fixed = x.fixed; const nat = o.nat || x.nat; if(nat) q.nat = nat; return q; });
+    if(JSON.stringify(next)!==JSON.stringify(t.crew)){ t.crew = next; ch = true; } });
   (SH.all.members||[]).forEach(m=>put(m.tid, m.team, m.name, m.role, m.lang));
   (SH.all.rows||[]).forEach(r=>put(r.tid, r.team, r.name));
   if(ch) shKeep();
@@ -2788,7 +2835,7 @@ function shDiffMine(){
 }
 function shFlushSoon(){ if(!shOn()) return; clearTimeout(SH.timer); SH.timer = setTimeout(shFlush, 600); }
 function shApply(j){
-  const before = JSON.stringify([S.team.crew, S.team.leaves, S.rec, S.team.notes]);
+  const before = JSON.stringify([S.team.crew, S.team.leaves, S.rec, S.team.notes, S.team.wkp]);
   const me = S.name, tk = todayK(), rows = j.rows||[], pend = S.shq||{}, lead = isLeader();
   // 명단: 시트에 있는 사람을 우리 조 목록에 추가
   const names = new Set((j.members||[]).map(m=>m.name)); rows.forEach(r=>names.add(r.name));
@@ -2811,6 +2858,9 @@ function shApply(j){
   });
   if(lead && !first) Object.keys(seen).forEach(sk=>{ if(now[sk]) return; const [n,k] = sk.split("|"); if(k>=tk) addNote(n, k, seen[sk].split("|")[0], "del"); });
   S.shSeen = now; S.shSeenInit = true;
+  // 주말·공휴일: 누가 출근(w)하고 누가 쉬는지(o)
+  const WK = {}; rows.forEach(r=>{ if(r.code==="w" || r.code==="o") (WK[r.date] = WK[r.date]||{})[r.name] = r.code; });
+  if(JSON.stringify(WK)!==JSON.stringify(S.team.wkp||{})){ S.team.wkp = WK; }
   // 조장님이 내 쉬는 날을 확인했는지 (서버 표시)
   rows.forEach(r=>{ if(r.name!==me || !r.ok || pend[r.date+"|"+me]) return; const x = (L[r.date]||[]).find(o=>o.n===me);
     if(x && !x.by && !x.ok && x.t===r.code){ x.ok = true; x.okBy = r.okBy||""; x.okAt = r.okAt||0; } });
@@ -2822,7 +2872,7 @@ function shApply(j){
       S.shp[r.date] = JSON.stringify([r.code, (S.memo[r.date]||{}).reason||"", r.by]);
       if(r.date===tk) toast(`조장님이 오늘 ${TST[r.code]||LBL[r.code]||r.code}로 넣었어요`); } });
   syncFromLead();
-  return before !== JSON.stringify([S.team.crew, S.team.leaves, S.rec, S.team.notes]);
+  return before !== JSON.stringify([S.team.crew, S.team.leaves, S.rec, S.team.notes, S.team.wkp]);
 }
 function shRerender(){
   if(document.getElementById("dim").classList.contains("show")) return;
@@ -2838,6 +2888,7 @@ function shStatus(){
 }
 window.addEventListener("online", ()=>{ shFlush(); });
 setInterval(()=>{ if(document.hidden || !shOn()) return; if(view==="admin") shPullAll(); else shPull(); }, 60000);
+setInterval(()=>{ if(document.hidden || !shOn() || view!=="admin") return; shPullAll(); }, 20000);   // 관리자 화면은 20초마다 새로
 document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && shOn()){ if(view==="admin") shPullAll(); else shPull(); } });
 if(shOn()) fbLoad().then(()=>{ if(S.name) shPull(); }).catch(e=>{ SH.err = true; shStatus(); });
 
