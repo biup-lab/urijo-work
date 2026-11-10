@@ -916,6 +916,7 @@ body.wide{padding-bottom:0}
 .tcard .tdh{margin:auto 0 16px}
 .tcard .thint{padding-top:38px}
 .meall{max-height:62vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.admst{margin:10px 16px 0;font-size:12.5px;color:var(--sub);text-align:right}
 /* 쉬는 날 계획: 우리 조 쉬는 날 */
 .crewoff{margin-top:28px;background:var(--card);border-radius:20px;padding:20px 18px 8px}
 .crewoff h2{margin:0 0 8px;font-size:18px;font-weight:700;color:var(--text)}
@@ -1070,7 +1071,8 @@ function syncMine(){
 function myEntry(k){ return ((S.team.leaves||{})[k]||[]).find(x=>x.n===S.name); }
 function pendCount(){ return (S.team.notes||[]).length; }
 function ago(t){ const m = Math.floor((Date.now()-t)/60000); if(m<1) return "방금"; if(m<60) return m+"분 전"; const h = Math.floor(m/60); if(h<24) return h+"시간 전"; const d = new Date(t); return `${d.getMonth()+1}월 ${d.getDate()}일`; }
-function leadOk(n,k){ const x = ((S.team.leaves||{})[k]||[]).find(o=>o.n===n); if(x && !x.by){ x.ok = true; x.okBy = S.leader||"조장"; x.okAt = Date.now(); }
+function leadOk(n,k){ const x = ((S.team.leaves||{})[k]||[]).find(o=>o.n===n); if(x && !x.by){ x.ok = true; x.okBy = S.leader||"조장"; x.okAt = Date.now();
+    if(shOn()){ S.okq = S.okq||{}; S.okq[k+"|"+n] = {date:k, name:n, okBy:x.okBy, okAt:x.okAt}; shFlushSoon(); } }   // 조원 폰에도 "조장 확인"이 뜨게 서버로 보내요
   S.team.notes = (S.team.notes||[]).filter(o=>!(o.n===n && o.k===k)); }
 function noteSheet(){
   const notes = [...(S.team.notes||[])].sort((a,b)=>b.at-a.at), sh = document.getElementById("sheet");
@@ -2127,7 +2129,15 @@ function admClean(){ const C = S.co; if(!C || !C.teams) return; let ch = false;
   C.teams = keep; if(ch) shKeep(); }
 function renderAdmin(){ admClean(); const all = ADM_ALL = S.co.teams; S.co.teams = all.filter(t=>t.name || t.crew.length);   // 이름 없는 빈 조(이 컴퓨터용)는 관리자 목록에서 숨겨요
   try{ if(admT && !S.co.teams.some(t=>t.id===admT)) admT = null; admT ? renderAdminTeam() : renderAdminCo(); } finally { S.co.teams = all; ADM_ALL = null; } admBar(); window.scrollTo(0,0); }
-function admBar(){ if(!SH.admNeed) return; const v = document.getElementById("v-admin"), d = document.createElement("div");
+/* 관리자 화면 맨 위 연결 상태 한 줄 (연하게) */
+function admState(){ const a = SH.adSt; if(!shOn() || SH.admNeed || !a) return "";
+  if(a.fail) return "서버에 연결하지 못했어요 · 인터넷을 확인해 주세요";
+  if(a.recs==="deny" && a.mem==="deny") return `${a.who} 계정은 서버에서 읽기가 막혀 있어요 · 권한 설정이 필요해요`;
+  const T = new Set((SH.all&&SH.all.members||[]).map(x=>x.tid)), n = (SH.all&&SH.all.rows||[]).length;
+  return `서버 연결됨 · 조 ${T.size}개 · 기록 ${n}건${a.recs?" · 기록 읽기 막힘":""}${a.mem?" · 명단 읽기 막힘":""} · ${a.who}`; }
+function admBar(){ const st = admState(); if(st && !SH.admNeed){ const v0 = document.getElementById("v-admin"), d0 = document.createElement("div");
+    d0.className = "admst"; d0.textContent = st; v0.prepend(d0); }
+  if(!SH.admNeed) return; const v = document.getElementById("v-admin"), d = document.createElement("div");
   d.style.cssText = "margin:10px 16px;padding:12px 14px;border-radius:12px;background:#fff4e5;color:#7a4b00;font-size:14px;display:flex;gap:10px;align-items:center;justify-content:space-between";
   d.innerHTML = `<span>회사 전체 기록은 대표님 구글 계정으로 로그인해야 보여요.</span><button class="adbtn" style="margin:0;white-space:nowrap">구글 로그인</button>`;
   d.querySelector("button").onclick = ()=>fbAdminSignIn().then(()=>shPullAll()).catch(()=>{}); v.prepend(d); }
@@ -2600,10 +2610,10 @@ async function fbJoin(){
   if(!S.name || !S.team || !S.team.name) return false;
   if(!S.team.tid){ if(!isLeader()) return false; S.team.tid = newTid(); S.team.own = true; shKeep(); }
   const f = await fbLoad(), {doc, setDoc} = f.m, uid = f.auth.currentUser.uid, role = isLeader() ? "조장" : "조원";
-  const sig = [shTid(), uid, S.name, role, shTeam()].join("|");
+  const lang = S.lang||"ko", sig = [shTid(), uid, S.name, role, shTeam(), lang].join("|");
   if(S.fbJoined===sig) return true;
   if(S.team.own) await withTO(setDoc(doc(f.db, "u2teams", shTid()), {name:shTeam(), leaderUid:uid, at:Date.now()}), 15000).catch(()=>{});
-  await withTO(setDoc(doc(f.db, "u2teams", shTid(), "members", uid), {name:S.name, role, team:shTeam(), tid:shTid(), at:Date.now()}), 15000);
+  await withTO(setDoc(doc(f.db, "u2teams", shTid(), "members", uid), {name:S.name, role, team:shTeam(), tid:shTid(), lang, at:Date.now()}), 15000);
   S.fbJoined = sig; shKeep(); return true;
 }
 async function shFlush(){
@@ -2618,10 +2628,17 @@ async function shFlush(){
       await withTO(b.commit(), 15000);
       part.forEach(r=>{ if(S.shq[r.id] && S.shq[r.id].at===r.at) delete S.shq[r.id]; });
     }
+    const oks = Object.entries(S.okq||{});                       // 조장 확인 표시 (조원 기록에 덧붙임)
+    if(oks.length){
+      const {writeBatch, doc} = FB.m, b = writeBatch(FB.db);
+      oks.forEach(([id,o])=>b.set(doc(FB.db, "u2recs", recId(o)), {ok:true, okBy:o.okBy, okAt:o.okAt}, {merge:true}));
+      await withTO(b.commit(), 15000);
+      oks.forEach(([id,o])=>{ if(S.okq[id] && S.okq[id].okAt===o.okAt) delete S.okq[id]; });
+    }
     SH.err = false; SH.last = Date.now(); shKeep();
   }catch(e){ SH.err = true; console.warn("[sync]", e && e.message); }
   SH.busy = false; shStatus();
-  if(!SH.err && Object.keys(S.shq||{}).length) shFlushSoon();
+  if(!SH.err && (Object.keys(S.shq||{}).length || Object.keys(S.okq||{}).length)) shFlushSoon();
   else if(SH.err){ clearTimeout(SH.retry); SH.retry = setTimeout(shFlush, 20000); }
 }
 /* 우리 조 기록 실시간으로 듣기 → 조장 화면·달력·새 소식에 반영 */
@@ -2660,21 +2677,27 @@ async function shPullAll(){
     SH.admNeed = false;
     const {collection, collectionGroup, query, where, getDocs} = FB.m;
     const from = ymd(workDays()[0] || new Date()), months = yms(from, 3);
-    const [r, m] = await Promise.all([getDocs(query(collection(FB.adb, "u2recs"), where("ym","in",months))), getDocs(collectionGroup(FB.adb, "members"))]);
-    const rows = r.docs.map(d=>d.data()).filter(x=>x.date>=from && x.code);
-    SH.all = {ok:true, rows:rows.filter(x=>!JUNK_T(x.team) && !JUNK_N(x.name)), members:m.docs.map(d=>d.data()).filter(x=>x.tid && !JUNK_T(x.team) && !JUNK_N(x.name))}; SH.err = false; shMergeAll(); if(view==="admin") renderAdmin();
-  }catch(e){ SH.err = true; console.warn("[admin]", e && e.message); }
+    const [r, m] = await Promise.allSettled([withTO(getDocs(query(collection(FB.adb, "u2recs"), where("ym","in",months))), 20000), withTO(getDocs(collectionGroup(FB.adb, "members")), 20000)]);
+    const why = x=>x.status==="rejected" ? (/permission/i.test(String(x.reason&&(x.reason.code||x.reason.message)))?"deny":"fail") : "";
+    SH.adSt = {at:Date.now(), who:FB.aauth.currentUser.email||"", recs:why(r), mem:why(m)};
+    if(r.status==="rejected" && m.status==="rejected") throw r.reason;
+    const rows = r.status==="fulfilled" ? r.value.docs.map(d=>d.data()).filter(x=>x.date>=from && x.code) : [];
+    const mem = m.status==="fulfilled" ? m.value.docs.map(d=>d.data()) : [];
+    SH.all = {ok:true, rows:rows.filter(x=>!JUNK_T(x.team) && !JUNK_N(x.name)), members:mem.filter(x=>x.tid && !JUNK_T(x.team) && !JUNK_N(x.name))}; SH.err = false; shMergeAll(); if(view==="admin") renderAdmin();
+  }catch(e){ SH.err = true; SH.adSt = {at:Date.now(), who:(FB.aauth&&FB.aauth.currentUser&&FB.aauth.currentUser.email)||"", recs:"deny", mem:"deny", fail:!/permission/i.test(String(e&&(e.code||e.message)))}; console.warn("[admin]", e && e.message); if(view==="admin") renderAdmin(); }
   shStatus();
 }
 /* 관리자: 서버에 있는 조·조원을 회사 조직(반·조 전체)에 채워 넣기 — 조장·조원이 가입한 조가 바로 보이게 */
 function shMergeAll(){
   if(!SH.all) return; const nz = x=>String(x||"").replace(/\s/g,""), C = S.co; let ch = false;
   const find = (tid, name)=>C.teams.find(t=>t.tid && t.tid===tid) || C.teams.find(t=>nz(t.name)===nz(name));
-  const put = (tid, team, name, role)=>{ if(!team || !name) return;
+  const NAT = {ko:"한국", ru:"러시아", uz:"우즈베키스탄", si:"스리랑카"};      // 앱 언어로 국적 자동 (관리자가 바꾸면 그게 우선)
+  const put = (tid, team, name, role, lang)=>{ if(!team || !name) return;
     let t = find(tid, team); if(!t){ t = newTeam(team); if(tid) t.tid = tid; C.teams.push(t); ch = true; } else if(tid && !t.tid && t.id!==S.myTeam){ t.tid = tid; ch = true; }
     let p = t.crew.find(x=>x.n===name); if(!p){ p = {n:name, r:""}; t.crew.push(p); ch = true; }
-    if(role==="조장" && !lead(t)){ p.role = "leader"; ch = true; } };
-  (SH.all.members||[]).forEach(m=>put(m.tid, m.team, m.name, m.role));
+    if(role==="조장" && !lead(t)){ p.role = "leader"; ch = true; }
+    if(!p.nat && NAT[lang]){ p.nat = NAT[lang]; ch = true; } };
+  (SH.all.members||[]).forEach(m=>put(m.tid, m.team, m.name, m.role, m.lang));
   (SH.all.rows||[]).forEach(r=>put(r.tid, r.team, r.name));
   if(ch) shKeep();
 }
@@ -2715,13 +2738,16 @@ function shApply(j){
   rows.forEach(r=>{
     if(r.name===me || !LVT.includes(r.code) || pend[r.date+"|"+r.name]) return;
     const o = old[r.name+"|"+r.date], by = r.by && r.by!==r.name ? r.by : null;
-    (L[r.date] = L[r.date]||[]).push({n:r.name, t:r.code, reason:r.reason||"", by, at:r.at, ok:by ? true : !!(o && o.t===r.code && o.ok), cok:o ? !!o.cok : false});
+    (L[r.date] = L[r.date]||[]).push({n:r.name, t:r.code, reason:r.reason||"", by, at:r.at, ok:by ? true : !!r.ok || !!(o && o.t===r.code && o.ok), cok:o ? !!o.cok : false});
     const sk = r.name+"|"+r.date; now[sk] = r.code+"|"+r.at;
     if(lead && !by && !first && r.date>=tk && seen[sk]!==now[sk]){ const pv = seen[sk] ? seen[sk].split("|")[0] : "";
       addNote(r.name, r.date, r.code, pv ? "change" : "add", pv); const nl = S.team.notes[S.team.notes.length-1]; if(nl) nl.reason = r.reason||""; }
   });
   if(lead && !first) Object.keys(seen).forEach(sk=>{ if(now[sk]) return; const [n,k] = sk.split("|"); if(k>=tk) addNote(n, k, seen[sk].split("|")[0], "del"); });
   S.shSeen = now; S.shSeenInit = true;
+  // 조장님이 내 쉬는 날을 확인했는지 (서버 표시)
+  rows.forEach(r=>{ if(r.name!==me || !r.ok || pend[r.date+"|"+me]) return; const x = (L[r.date]||[]).find(o=>o.n===me);
+    if(x && !x.by && !x.ok && x.t===r.code){ x.ok = true; x.okBy = r.okBy||""; x.okAt = r.okAt||0; } });
   // 조장님이 나 대신 넣은 기록
   S.byLead = S.byLead||{}; S.shAt = S.shAt||{}; S.shp = S.shp||{};
   rows.forEach(r=>{ if(r.name!==me || !r.by || r.by===me || r.at<=(S.shAt[r.date]||0)) return;
