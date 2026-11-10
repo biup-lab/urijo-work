@@ -913,6 +913,7 @@ body.wide{padding-bottom:0}
 .tcard .saved{min-height:0}
 .tcard .tdh{margin:auto 0 16px}
 .tcard .thint{padding-top:38px}
+.meall{max-height:62vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 </style>
 </head>
 <body>
@@ -2675,9 +2676,12 @@ if(shOn()) fbLoad().then(()=>{ if(S.name) shPull(); }).catch(e=>{ SH.err = true;
 
 /* ===== 식단표 =====
    대표님이 관리자 화면에서 한 달 치를 붙여넣으면(u2meals/{YYYY-MM}) 전 직원 메인 화면에 오늘 메뉴가 떠요. */
+/* 파일에 넣어둔 식단 (회사 식단 시트에서 옮김). 관리자 화면에서 새로 올리면 그게 우선이에요. */
+const MEAL_BUILTIN = {"2026-11":{"days":{"10":{"l":"쌀밥, (new)통영식시래기홍합탕, 닭살간장볶음, 호박채전&초간장, 부추적채겉절이, 배추김치","p":"타워함박스테이크&데미소스, 팽이장국, 쌀밥, 버터롤&딸기잼, 양배추샐러드&사우전드레싱, 배추김치","d":""},"11":{"l":"쌀밥, 시금치된장국 [특식], 삼겹수육, 배추김치","p":"매콤청양자장면, 계란국, 쌀밥, 갈비만두&초간장, 단무지,양파&춘장, 배추김치","d":""},"12":{"l":"쌀밥, 콩나물국, 모둠까스&타르타르소스, 일식카레소스, 열무겉절이, 파김치","p":"떡라면, 쌀밥, 김밥반줄, 오이탕탕이, 배추김치","d":""},"13":{"l":"쌀밥, 들깨미역국, 돈육김치볶음, 연두부&양념장, 양념고추지, 깍두기","p":"짬뽕, 쌀밥, 새우짜조롤, 반달단무지, 배추김치","d":""},"14":{"l":"쌀밥, 고사리육개장, 너비아니조림, 삼색겨자냉채, 청경채겉절이, 배추김치","p":"해물칼국수, 쌀밥, 부추전&초간장, 양파와사비절임, 배추겉절이","d":""},"15":{"l":"쌀밥, 시래기된장국, 돈육고추장조림, 마카로니샐러드, 콩나물무침, 배추김치","p":"","d":""},"16":{"l":"쌀밥, 묵은지순살감자탕, 참나물부추전&양념장, 잡채, 적채겉절이, 깍두기","p":"무파마라면, 쌀밥, 충무김밥&충무식어묵무침, 반달단무지, 배추김치","d":""},"17":{"l":"쌀밥, 황태해장국, 춘천닭갈비, 모둠버섯볶음, 무쌈&간장깻잎지, 배추김치","p":"라구돈까스, 단호박스프, 쌀밥, 쫄면채소무침, 양배추샐러드&키위드레싱, 배추김치","d":""},"18":{"l":"쌀밥, 시금치된장국, 돈육고추장조림, 연근깨소스무침, 동초겉절이, 배추김치","p":"유니자장면&계란국, 쌀밥, 고구마롤, 단무지,양파&춘장, 배추김치","d":""},"19":{"l":"얼갈이비빔밥&계란후라이, 어묵국, 해물완자조림, 강된장, 부추생채, 갓김치","p":"김치말이국수, 언양식불고기&양파채, 락교&산고추지, 깍두기","d":""},"20":{"l":"쌀밥, (new)돈육표고국밥, 모둠튀김&초간장, 미역줄기볶음, 치커리파인생채, 배추김치 (+밀감)","p":"짬뽕, 쌀밥, 지마구, 짜사이무침, 배추김치 (+밀감)","d":""},"21":{"l":"쌀밥, 콩비지찌개, 닭살떡볶음, 알감자조림, 열무겉절이, 깍두기","p":"얼큰우동, 쌀밥, 오징어핫바&케첩, 반달단무지, 배추김치","d":""},"22":{"l":"쌀밥, 가리국밥, 미트볼조림, 삼색나물, 양파청초쌈장무침, 배추김치","p":"","d":""},"23":{"l":"쌀밥, 바지락살미역국, 돈육시래기볶음, 맛살채소볶음, 동초생채, 배추김치","p":"(new)소시지오므라이스&불닭데미소스, 팽이장국, (new)땅콩소스비빔면, 꼬들단무지&락교, 배추김치","d":""},"24":{"l":"귀리기장밥, 수제비국, 닭살고추장볶음&마늘소스, 모둠콩조림, 참나물겉절이, 배추김치","p":"꼬지어묵잔치국수, 미니메밀전병, 반달단무지, 배추김치","d":""},"25":{"l":"쌀밥, 어묵국, 돈육김치볶음, 두부구이&양념장, 콩나물무침, 깍두기","p":"쟁반자장면&계란국, 쌀밥, 왕교자만두&초간장, 단무지,양파&춘장, 배추김치","d":""},"26":{"l":"[콜라보] 쌀밥, 놀부부대찌개&당면사리, 생선까스&타르타르소스, 감자채볶음, 청경채생채, 갓김치","p":"장칼국수, 쌀밥, 매생이전&초간장, 양파와사비절임, 배추겉절이","d":""},"27":{"l":"쌀밥, 순두부순살감자탕, 너비아니조림, 사천식잡채, 무생채, 배추김치","p":"[콜라보] 백짬뽕, 쌀밥, 깐풍기&유린기소스, 반달단무지, 배추김치","d":""},"28":{"l":"쌀밥, 배추된장국, 돈육파채불고기, 충무식어묵무침, 부추생채, 깍두기","p":"해장라면, 쌀밥, 새우볼꼬치&케첩, 반달단무지, 배추김치","d":""},"29":{"l":"쌀밥, 양해장국, 허니소스두부강정, 가지나물, 열무겉절이, 배추김치","p":"","d":""}},"at":1762700000000}};
 const MEAL_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11h16a8 8 0 0 1-16 0Z"/><path d="M9 3c-.8 1 .8 2 0 3M13 3c-.8 1 .8 2 0 3M8 21h8"/></svg>';
 const mealYm = d => ymd(d).slice(0,7);
-function mealOf(d){ const m = (S.meal||{})[mealYm(d)]; const v = m && m.days && m.days[d.getDate()]; return v ? {l:v.l||"", p:v.p||"", d:v.d||""} : null; }
+function mealMonth(ym){ const a = (S.meal||{})[ym], b = MEAL_BUILTIN[ym]; return (a && a.days && (!b || (a.at||0) >= (b.at||0))) ? a.days : (b ? b.days : (a && a.days) || {}); }
+function mealOf(d){ const v = mealMonth(mealYm(d))[d.getDate()]; return v ? {l:v.l||"", p:v.p||"", d:v.d||""} : null; }
 const mealItems = t => String(t||"").split(/\s*[,·ㆍ、\n]\s*|\s{2,}/).map(x=>x.trim()).filter(Boolean);
 function mealNow(d){ const m = mealOf(d); if(!m) return null;
   if(new Date().getHours()>=14 && m.d) return [["오늘 저녁", m.d]];                    // 오후 2시부터는 저녁 메뉴(있으면)
@@ -2685,7 +2689,8 @@ function mealNow(d){ const m = mealOf(d); if(!m) return null;
   const one = m.l || m.p || m.d; return one ? [["오늘 점심", one]] : null; }
 function mealHTML(){
   const L = mealNow(new Date()); if(!L) return "";
-  return `<button class="meal1" id="mealb">${L.map(([lb,tx])=>`<span class="ml"><span>${lb}</span>${mealItems(tx).map(esc).join(", ")}</span>`).join("")}</button>`;
+  const short = tx => mealItems(tx).map(x=>x.replace(/\(new\)\s*/gi,"").trim()).filter(x=>x && !/^(?:\[[^\]]*\]\s*)?쌀밥$/.test(x));
+  return `<button class="meal1" id="mealb">${L.map(([lb,tx])=>`<span class="ml"><span>${lb}</span>${short(tx).map(esc).join(", ")}</span>`).join("")}</button>`;
 }
 function mealSheet(){
   const sh = document.getElementById("sheet"), t = new Date(), mon = mk(t.getFullYear(), t.getMonth(), t.getDate()-((t.getDay()+6)%7));
@@ -2694,51 +2699,68 @@ function mealSheet(){
   sh.innerHTML = `<h3>이번 주 식단</h3><p>${t.getMonth()+1}월 ${mon.getDate()}일 주</p><div class="meall">${rows.join("")||`<div class="adempty">이번 주 식단이 아직 없어요.</div>`}</div><button class="close" id="cls">닫기</button>`;
   document.getElementById("cls").onclick = closeDim; openDim();
 }
-/* 붙여넣은 글·표 → 날짜별 메뉴 {l:한식(점심), p:일품, d:저녁}
-   "10 제육볶음, 된장국" / "11/10(화) …" / "10일" 다음 줄에 메뉴 / "… / 일품 … / 저녁 …"
-   엑셀에서 복사한 표(탭으로 나뉜 칸)도 받아요: 날짜 | 한식 | 일품 | 저녁  (첫 줄이 제목 줄이면 그 순서를 따라요) */
-function mealParse(txt, y, m){
-  const days = {}, dim = mk(y, m+1, 0).getDate(); let cur = 0, cols = ["l","p","d"];
-  const KEY = t => /^(?:일품|특식|양식|분식)/.test(t) ? "p" : /^(?:저녁|석식)/.test(t) ? "d" : /^(?:점심|중식|한식)/.test(t) ? "l" : "";
+/* 붙여넣은 글·표 → 날짜별 메뉴 {l:한식, p:일품, d:저녁}
+   - 회사 식단 시트를 그대로 복사해도 돼요: "11/10 | 화 | 쌀밥/국 | 메인 | 반찬 | 반찬 | 김치" (제목·머리글 줄, "메뉴 없음"은 건너뜀)
+   - "10 | 메뉴" 두 칸 표, "10 제육볶음, 된장국 / 일품 … / 저녁 …" 글도 돼요
+   force: 한식 칸이면 "l", 일품 칸이면 "p" */
+function mealParse(txt, y, m, force){
+  const days = {}, dim = mk(y, m+1, 0).getDate(), base = force||"l"; let cur = 0, cols = null;
+  const KEY = t => /^(?:일품|특식|양식|분식)$/.test(t) ? "p" : /^(?:저녁|석식)$/.test(t) ? "d" : /^(?:점심|중식|한식)$/.test(t) ? "l" : "";
   const LBL_RE = /^(?:일품|특식|양식|분식|저녁|석식|점심|중식|한식)\s*[:：]?\s*/;
-  const add = (n, k, t)=>{ t = String(t||"").trim().replace(/^[,·\s]+|[,·\s]+$/g,""); if(!t) return; const o = days[n] = days[n]||{l:"", p:"", d:""}; o[k] = [o[k], t].filter(Boolean).join(", "); };
+  const NONE = /^(?:메뉴\s*(?:없음|미등록)|없음|휴무|-)$/;
+  const add = (n, k, t)=>{ t = String(t||"").trim().replace(/^[,·\s]+|[,·\s]+$/g,""); if(!t || NONE.test(t)) return; const o = days[n] = days[n]||{l:"", p:"", d:""}; o[k] = [o[k], t].filter(Boolean).join(", "); };
   const put = (n, body)=>{ body = body.trim(); if(!body) return;
+    if(force){ add(n, force, body.replace(LBL_RE,"")); return; }
     body.replace(/\s+(일품|특식|저녁|석식)\s*[:：]?\s*/g, " / $1 ").split(/\s*[\/|]\s*/).forEach((seg, i)=>{ seg = seg.trim(); if(!seg) return;
-      const k = KEY(seg); add(n, k || (i===0 ? "l" : "d"), k ? seg.replace(LBL_RE,"") : seg); }); };
-  const DATE = /^(?:(\d{1,2})\s*[\/.\-월]\s*)?(\d{1,2})\s*일?\s*(?:\(?\s*[월화수목금토일]\s*(?:요일)?\s*\)?)?\s*[:：.\-]?\s*(.*)$/;
+      const k = KEY(seg.split(/\s|[:：]/)[0]); add(n, k || (i===0 ? base : "d"), k ? seg.replace(LBL_RE,"") : seg); }); };
+  const DATE = /^(?:(\d{4})\s*[.\-\/년]\s*)?(?:(\d{1,2})\s*[\/.\-월]\s*)?(\d{1,2})(일)?(?:\s*\(\s*[월화수목금토일](?:요일)?\s*\)|\s+[월화수목금토일](?:요일)?(?=\s|$))?\s*[:：.\-]?\s*(.*)$/;
+  const dayOf = c => { const g0 = String(c||"").trim().match(DATE); if(!g0) return null;
+    const g = [g0[0], g0[1], g0[2], g0[3], g0[5]]; if(/^월/.test(g[4]) && !g0[4]) return null;   /* "11월 …"(달만 있는 제목)은 날짜가 아님 */ if(g[2] && +g[2]!==m+1) return -1; const n = +g[3]; return n>=1 && n<=dim ? {n, rest:g[4]} : null; };
   String(txt||"").split(/\r?\n/).forEach(raw=>{ const line = raw.trim(); if(!line) return;
     if(/^[\d.,]+\s*(?:kcal|칼로리|g|명|인분)\b/i.test(line) || /^(?:열량|칼로리|kcal)/i.test(line)) return;      // 열량 줄은 건너뜀
     if(raw.includes("\t")){ const c = raw.split("\t").map(x=>x.trim());
-      if(/^(?:날짜|일자|일|요일|구분)?$/.test(c[0]) && c.slice(1).some(x=>KEY(x))){ cols = c.slice(1).map(x=>KEY(x)||""); return; }   // 제목 줄
-      const g = c[0].match(DATE);
-      if(g && g[1] && +g[1]!==m+1){ cur = 0; return; }
-      if(g && !g[3] && +g[2]>=1 && +g[2]<=dim){ cur = +g[2]; c.slice(1).forEach((t,i)=>{ if(cols[i]) add(cur, cols[i], t.replace(/\s*\n\s*/g,", ")); }); return; } }
-    const text = line.replace(/\t/g,"  "), g = text.match(DATE);
-    if(g && g[1] && +g[1]!==m+1){ cur = 0; return; }                                                          // 다른 달 날짜는 건너뜀
-    if(g && +g[2]>=1 && +g[2]<=dim){ cur = +g[2]; put(cur, g[3]||""); }
-    else if(cur) put(cur, text); });
+      const d = dayOf(c[0]);
+      if(!d){ // 제목·머리글 줄
+        if(/^(?:날짜|일자|일)$/.test(c[0])){ cols = c.map(x=>KEY(x)); if(!cols.some(Boolean)) cols = null; }
+        cur = 0; return; }
+      if(d===-1){ cur = 0; return; }                                                                     // 다른 달
+      cur = d.n; let rest = c.slice(1), ks = cols ? cols.slice(1) : null;
+      if(rest.length && /^[월화수목금토일](?:요일)?$/.test(rest[0])){ rest = rest.slice(1); if(ks) ks = ks.slice(1); }   // 요일 칸
+      if(d.rest) rest.unshift(d.rest);
+      if(ks && ks.some(Boolean)) rest.forEach((t,i)=>{ if(ks[i]) add(cur, ks[i], t.replace(/\s*\/\s*/g,", ")); });
+      else add(cur, base, rest.map(t=>t.replace(/\s*\/\s*/g,", ")).filter(t=>t && !NONE.test(t)).join(", "));
+      return; }
+    const d = dayOf(line);
+    if(d===-1){ cur = 0; return; }                                                                       // 다른 달 날짜는 건너뜀
+    if(d){ cur = d.n; put(cur, d.rest||""); }
+    else if(cur) put(cur, line); });
   Object.keys(days).forEach(k=>{ if(!days[k].l && !days[k].p && !days[k].d) delete days[k]; });
   return days;
 }
 function mealAdmin(off){
   const sh = document.getElementById("sheet"), t = new Date(); off = off||0;
   const d0 = mk(t.getFullYear(), t.getMonth()+off, 1), y = d0.getFullYear(), m = d0.getMonth(), ym = ymd(d0).slice(0,7);
-  const cur = ((S.meal||{})[ym]||{}).days||{}, has = Object.keys(cur).length;
-  const text = Object.keys(cur).map(Number).sort((a,b)=>a-b).map(n=>`${n} ${cur[n].l||""}${cur[n].p?` / 일품 ${cur[n].p}`:""}${cur[n].d?` / 저녁 ${cur[n].d}`:""}`).join("\n");
-  sh.innerHTML = `<h3>식단표 넣기</h3><p>한 달 치를 붙여넣으면 전 직원 메인 화면에 그날 메뉴가 떠요.</p>
-    <div class="two" style="margin-bottom:10px"><button data-mo="0" class="${off===0?"pri":""}">${t.getMonth()+1}월 (이번 달)</button><button data-mo="1" class="${off===1?"pri":""}">${mk(t.getFullYear(),t.getMonth()+1,1).getMonth()+1}월 (다음 달)</button></div>
-    <textarea class="adta" id="mealta" rows="9" placeholder="한 줄에 하루씩 넣어주세요.&#10;&#10;2 제육볶음, 된장국, 계란말이&#10;3 닭갈비, 미역국 / 일품 돈까스, 우동&#10;4 비빔밥, 콩나물국 / 일품 짜장면 / 저녁 김치찌개&#10;&#10;날짜는 2 · 2일 · 11/2 · 11월 2일(월) 모두 돼요.&#10;엑셀 표(날짜·한식·일품)를 복사해 붙여도 돼요.">${esc(text)}</textarea>
+  const cur = mealMonth(ym), has = Object.keys(cur).length, ns = Object.keys(cur).map(Number).sort((a,b)=>a-b);
+  const tL = ns.filter(n=>cur[n].l||cur[n].d).map(n=>`${n} ${cur[n].l||""}${cur[n].d?` / 저녁 ${cur[n].d}`:""}`).join("\n");
+  const tP = ns.filter(n=>cur[n].p).map(n=>`${n} ${cur[n].p}`).join("\n");
+  sh.innerHTML = `<h3>식단표 넣기</h3><p>식단 시트에서 표를 통째로 복사해 붙여넣으세요. 전 직원 메인 화면에 그날 메뉴가 떠요.</p>
+    <div class="two" style="margin-bottom:12px"><button data-mo="0" class="${off===0?"pri":""}">${t.getMonth()+1}월 (이번 달)</button><button data-mo="1" class="${off===1?"pri":""}">${mk(t.getFullYear(),t.getMonth()+1,1).getMonth()+1}월 (다음 달)</button></div>
+    <p class="rnote">한식</p><textarea class="adta" id="mealta" rows="6" style="margin-top:0" placeholder="‘${m+1}월 한식’ 표를 복사해서 붙여넣기">${esc(tL)}</textarea>
+    <p class="rnote">일품</p><textarea class="adta" id="mealtp" rows="6" style="margin-top:0" placeholder="‘${m+1}월 일품’ 표를 복사해서 붙여넣기">${esc(tP)}</textarea>
     <p class="rnote sm" id="mealpv">${has?`지금 ${has}일 치가 들어 있어요.`:"아직 넣은 식단이 없어요."}</p>
     <button class="opt full" id="mealsv" style="width:100%;margin-top:10px;background:var(--trust);color:#fff;border-color:var(--trust)">${m+1}월 식단 저장하기</button>
     <button class="close" id="cls">닫기</button>`;
-  const ta = document.getElementById("mealta"), pv = document.getElementById("mealpv");
+  const ta = document.getElementById("mealta"), tp = document.getElementById("mealtp"), pv = document.getElementById("mealpv");
+  const both = ()=>{ const a = mealParse(ta.value, y, m, "l"), b = mealParse(tp.value, y, m, "p"), o = {};
+    [a,b].forEach(x=>Object.entries(x).forEach(([n,v])=>{ const t2 = o[n] = o[n]||{l:"",p:"",d:""}; ["l","p","d"].forEach(k=>{ if(v[k]) t2[k] = v[k]; }); })); return o; };
   sh.querySelectorAll("[data-mo]").forEach(b=>b.onclick=()=>mealAdmin(+b.dataset.mo));
-  ta.oninput = ()=>{ const n = Object.keys(mealParse(ta.value, y, m)).length; pv.textContent = ta.value.trim() ? (n ? `${n}일 치를 알아봤어요.` : "날짜를 못 찾았어요. 줄 맨 앞에 날짜를 넣어주세요.") : "비우고 저장하면 이 달 식단이 지워져요."; };
+  ta.oninput = tp.oninput = ()=>{ const a = Object.keys(mealParse(ta.value, y, m, "l")).length, b = Object.keys(mealParse(tp.value, y, m, "p")).length;
+    pv.textContent = (ta.value.trim()||tp.value.trim()) ? `한식 ${a}일 · 일품 ${b}일 치를 알아봤어요.` : "비우고 저장하면 이 달 식단이 지워져요."; };
   document.getElementById("cls").onclick = closeDim;
   document.getElementById("mealsv").onclick = async ()=>{
-    const days = mealParse(ta.value, y, m), n = Object.keys(days).length;
-    if(ta.value.trim() && !n){ toast("날짜를 못 찾았어요"); return; }
-    (S.meal = S.meal||{})[ym] = {days, at:Date.now()}; shKeep(); closeDim();
+    const days = both(), n = Object.keys(days).length;
+    if((ta.value.trim()||tp.value.trim()) && !n){ toast("날짜를 못 찾았어요"); return; }
+    (S.meal = S.meal||{})[ym] = {days, at:Date.now()}; shKeep(); closeDim(); if(view==="today") renderToday();
     if(!shOn()){ toast(`${m+1}월 식단 ${n}일 치를 이 폰에 넣었어요`); return; }
     try{ await fbLoad(); if(!FB.aauth.currentUser) await fbAdminSignIn();
       await withTO(FB.m.setDoc(FB.m.doc(FB.adb, "u2meals", ym), {days, at:Date.now()}), 15000);
@@ -2776,7 +2798,6 @@ go(cat==="team" ? "team" : "today");
 if(TEST && !S.name){   // 테스트용 계정과 조원을 미리 넣어둠
   S.name = "테스트조장"; S.team.name = "테스트조"; S.co.setup = true;
   S.team.crew = [{n:"테스트조장", r:"", role:"leader"}, {n:"김철수", r:"5"}, {n:"이영희", r:"6"}, {n:"박민수", r:"6"}, {n:"최지훈", r:"a"}, {n:"한도윤", r:""}];
-  const t0 = new Date(); (S.meal = S.meal||{})[ymd(t0).slice(0,7)] = {days:{[t0.getDate()]:{l:"제육볶음, 된장국, 계란찜, 콩나물무침, 배추김치", p:"돈까스, 우동, 양배추샐러드", d:""}}, at:1};
   save(); applyRole(); go("today");
 }
 if(TEST){ const tb = document.createElement("div"); tb.className = "testb"; tb.textContent = "테스트 모드 · 실제 기록과 연결 안 됨"; document.body.appendChild(tb); }
