@@ -1545,7 +1545,8 @@ const TST = {"6":"6시","5":"5시",h:"반차",e:"조퇴",m:"월차",a:"연차",x
 const OFFS = ["m","a","x","l"];
 function newTeam(name, id){ return {id: id || "t"+Date.now().toString(36)+Math.random().toString(36).slice(2,5), name, ban:"", conf:null, leaves:{}, crew:[]}; }
 if(!S.co) S.co = {name:"", bans:[], teams:[newTeam("","t1")], setup:false};
-Object.defineProperty(S, "team", {get(){ return S.co.teams.find(t=>t.id===S.myTeam) || S.co.teams[0]; }, configurable:true, enumerable:false});
+let ADM_ALL = null;   // 관리자 화면을 그리는 동안만: 숨긴 조까지 포함한 전체 목록
+Object.defineProperty(S, "team", {get(){ const L = ADM_ALL || S.co.teams; return L.find(t=>t.id===S.myTeam) || L[0]; }, configurable:true, enumerable:false});
 const teamFull = (t=S.team) => [S.co.name, t.name].filter(Boolean).join(" ") || "팀근무관리";
 function members(){
   const r = S.rec[todayK()], mr = TST[r]!==undefined ? r : "";
@@ -2071,7 +2072,17 @@ function adminLogin(){
   };
   openDim(); setTimeout(()=>document.getElementById("apw").focus(),80);
 }
-function renderAdmin(){ if(admT && !S.co.teams.some(t=>t.id===admT)) admT = null; admT ? renderAdminTeam() : renderAdminCo(); admBar(); window.scrollTo(0,0); }
+/* 예전 테스트로 생긴 "테스트조"·"가상조원"은 관리자 화면에서 지워요 (대표님 요청). 서버에 남아 있어도 관리자 화면엔 안 보여요. */
+const JUNK_T = x=>String(x||"").replace(/\s/g,"")==="테스트조", JUNK_N = x=>String(x||"").replace(/\s/g,"")==="가상조원";
+function admClean(){ const C = S.co; if(!C || !C.teams) return; let ch = false;
+  C.teams.forEach(t=>{ const n = t.crew.length; t.crew = t.crew.filter(p=>!JUNK_N(p.n)); if(t.crew.length!==n) ch = true; });
+  const mine = S.team, junkMine = mine && JUNK_T(mine.name);
+  const keep = C.teams.filter(t=>!JUNK_T(t.name)); if(keep.length!==C.teams.length) ch = true;
+  if(junkMine){ const t = newTeam(""); keep.push(t); S.myTeam = t.id;                 // 이 컴퓨터의 테스트 기록도 비워요 (다른 조로 기록이 올라가지 않게)
+    S.name = ""; S.leader = null; S.rec = {}; S.memo = {}; S.shq = {}; S.shp = {}; S.shAt = {}; delete S.fbJoined; }
+  C.teams = keep; if(ch) shKeep(); }
+function renderAdmin(){ admClean(); const all = ADM_ALL = S.co.teams; S.co.teams = all.filter(t=>t.name || t.crew.length);   // 이름 없는 빈 조(이 컴퓨터용)는 관리자 목록에서 숨겨요
+  try{ if(admT && !S.co.teams.some(t=>t.id===admT)) admT = null; admT ? renderAdminTeam() : renderAdminCo(); } finally { S.co.teams = all; ADM_ALL = null; } admBar(); window.scrollTo(0,0); }
 function admBar(){ if(!SH.admNeed) return; const v = document.getElementById("v-admin"), d = document.createElement("div");
   d.style.cssText = "margin:10px 16px;padding:12px 14px;border-radius:12px;background:#fff4e5;color:#7a4b00;font-size:14px;display:flex;gap:10px;align-items:center;justify-content:space-between";
   d.innerHTML = `<span>회사 전체 기록은 대표님 구글 계정으로 로그인해야 보여요.</span><button class="adbtn" style="margin:0;white-space:nowrap">구글 로그인</button>`;
@@ -2606,7 +2617,7 @@ async function shPullAll(){
     const from = ymd(workDays()[0] || new Date()), months = yms(from, 3);
     const [r, m] = await Promise.all([getDocs(query(collection(FB.adb, "u2recs"), where("ym","in",months))), getDocs(collectionGroup(FB.adb, "members"))]);
     const rows = r.docs.map(d=>d.data()).filter(x=>x.date>=from && x.code);
-    SH.all = {ok:true, rows, members:m.docs.map(d=>d.data()).filter(x=>x.tid)}; SH.err = false; shMergeAll(); if(view==="admin") renderAdmin();
+    SH.all = {ok:true, rows:rows.filter(x=>!JUNK_T(x.team) && !JUNK_N(x.name)), members:m.docs.map(d=>d.data()).filter(x=>x.tid && !JUNK_T(x.team) && !JUNK_N(x.name))}; SH.err = false; shMergeAll(); if(view==="admin") renderAdmin();
   }catch(e){ SH.err = true; console.warn("[admin]", e && e.message); }
   shStatus();
 }
