@@ -786,7 +786,7 @@ table.st{width:100%;border-collapse:collapse;font-size:14px;min-width:560px}
 .tmain .tnm{background:#F2F4F6;color:var(--text)}
 .k5 .trl b,.k6 .trl b{color:#2F5BB7}
 .k5 .tnm,.k6 .tnm{background:#EAF0FB;color:#1F3F7A}
-.km .trl b,.ka .trl b,.kh .trl b,.ks .trl b,.kn .trl b{color:#4E5968;font-size:17px}
+.km .trl b,.ka .trl b,.kh .trl b,.ks .trl b,.kn .trl b,.kw .trl b,.ko .trl b{color:#4E5968;font-size:17px}
 .tsend{background:#F3F6FB;border-radius:20px;padding:16px}
 .tsend p{margin:0 0 12px;font-size:13px;color:var(--sub);text-align:center;line-height:1.5}
 .tsend p em{font-style:normal;color:var(--text);font-weight:600}
@@ -822,6 +822,10 @@ table.st{width:100%;border-collapse:collapse;font-size:14px;min-width:560px}
 .rcrew{margin:16px 2px 2px!important;font-size:12.5px!important;color:var(--sub)!important;text-align:center;line-height:1.5}
 .rcrew b{color:var(--text)}
 .msg{overflow-wrap:anywhere;word-break:break-all}
+
+/* 연차를 크게, 주말 쉼 표시 */
+.opt.big{font-size:20px;padding:20px 8px}
+#v-leave .c-o,.c-o{background:#EEF0F3;color:#6B7684}
 </style>
 </head>
 <body>
@@ -1061,7 +1065,7 @@ function renderToday(){
   const c = document.getElementById("clr"); if(c) c.onclick=()=>{ delete S.rec[k]; (S.noAuto=S.noAuto||{})[k]=1; save(); renderToday(); };
   const u = document.getElementById("undoLv"); if(u) u.onclick=()=>{ delete S.rec[k]; save(); renderToday(); };
   const e = document.getElementById("etc"); if(e) e.onclick=()=>modal(dl, "오늘 쉬시거나 반차면 골라주세요.",
-    [{v:"m",l:"월차",s:"하루 쉼"},{v:"h",l:"반차",s:"4시간 근무"},{v:"a",l:"연차",s:"하루 쉼",full:1},{v:"sp",l:"특이사항",s:"3시 퇴근 · 결근 · 조퇴 · 장기 휴무",full:1},{v:"fx",l:"요일 고정 퇴근 설정",s:"예: 월·목은 늘 5시",full:1}].map(o=>({...o,on:r===o.v})).concat(LV[r]?[{v:"del",l:LV[r]+" 지우기",del:1}]:[]),
+    [{v:"a",l:"연차",s:"하루 쉼",full:1,big:1},{v:"h",l:"반차",s:"4시간 근무"},{v:"m",l:"월차",s:"하루 쉼 · 입사 1년 전"},{v:"sp",l:"특이사항",s:"3시 퇴근 · 결근 · 조퇴 · 장기 휴무",full:1},{v:"fx",l:"요일 고정 퇴근 설정",s:"예: 월·목은 늘 5시",full:1}].map(o=>({...o,on:r===o.v})).concat(LV[r]?[{v:"del",l:LV[r]+" 지우기",del:1}]:[]),
     x=>{ if(x==="sp") return special(k, renderToday); if(x==="fx") return fixedModal(myFixed(), "내 요일 고정 퇴근", renderToday); if(x==="del") delete S.rec[k]; else S.rec[k]=x; save(); renderToday(); toast(x==="del"?"지웠어요":LV[x]+"로 넣었어요"); });
   document.getElementById("goSheet").onclick=()=>go("sheet");
 }
@@ -1164,7 +1168,8 @@ function renderLeave(){
     const d = mk(y,m,i), k = ymd(d), dw = d.getDay(), h = HOL[k], r = S.rec[k];
     const cls = ["cell", dw===6&&!h?"sat":"", (dw===0||h)?"red":"", k===t?"today":"", LBL[r]?"lv":""].join(" ");
     let inner = `<span class="n">${i}</span>`;
-    if(LBL[r]){ inner += `<span class="chip c-${r}">${LBL[r]}</span>`; list.push([d,r]); }
+    if(r==="o") inner += `<span class="chip c-o">쉼</span>`;
+    else if(LBL[r]){ inner += `<span class="chip c-${r}">${LBL[r]}</span>`; list.push([d,r]); }
     else if(r==="5"||r==="6") inner += `<span class="wt">${r}시</span>`;
     else if(h) inner += `<span class="hn">${h[0]}</span>`;
     if(oth[k] && !isRest(d,k)) inner += `<span class="oth">${oth[k].some(x=>x.n===leadName())?"조장":oth[k].length+"명"}</span>`;
@@ -1178,7 +1183,7 @@ function renderLeave(){
     <div class="fillb"><span>${m+1}월 평일 한 번에</span><button data-fill="5">전부 5시</button><button data-fill="6">전부 6시</button></div>
     ${lastFill && lastFill.ym===y+"-"+m ? `<p class="undof">평일을 ${lastFill.t}시로 채웠어요. 날짜를 눌러 하나씩 바꿀 수 있어요. <button class="lnk" id="undoFill">되돌리기</button></p>`:""}
     <div class="cal"><div class="wk"><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div><div>일</div></div><div class="grid">${cells}</div>
-      <div class="legend"><span><i class="c-m"></i>월차</span><span><i class="c-h"></i>반차</span><span><i class="c-a"></i>연차</span><span><i class="c-w"></i>주말 출근</span><span><i style="background:#E3E7EC"></i>다른 조원</span></div></div>
+      <div class="legend"><span><i class="c-a"></i>연차</span><span><i class="c-h"></i>반차</span><span><i class="c-m"></i>월차</span><span><i class="c-w"></i>주말 출근</span><span><i style="background:#E3E7EC"></i>다른 조원</span></div></div>
     <div class="plist">${rows}</div>`;
   document.getElementById("lp").onclick=()=>{ lm = shift(lm,-1); renderLeave(); };
   document.getElementById("ln").onclick=()=>{ lm = shift(lm,1); renderLeave(); };
@@ -1192,14 +1197,14 @@ function leaveModal(k){
   if(isRest(d,k)){
     const h = HOL[k];
     modal(`${md(d)} ${h?h[0]:DOW[d.getDay()]+"요일"}`, d.getDay()===0?"이날 출근하시나요? 일요일은 현장에서 일급으로 받아서 월급 계산엔 안 들어가고 출근만 체크돼요.":"이날 출근하시나요? 주말·공휴일은 5시 퇴근이에요.",
-      [{v:"w",l:"출근해요",s:d.getDay()===0?"출근만 체크":"5시 퇴근, 공수 12",full:1,on:r==="w"}].concat(r==="w"?[{v:"del",l:"주말 출근 지우기",del:1}]:[]),
-      v=>{ if(v==="del") delete S.rec[k]; else S.rec[k]=v; save(); renderLeave(); toast(v==="del"?"지웠어요":"주말 출근으로 넣었어요"); });
+      [{v:"w",l:"출근해요",s:d.getDay()===0?"출근만 체크":"5시 퇴근, 공수 12",on:r==="w"},{v:"o",l:"쉬어요",s:"출근 안 해요",on:r==="o"}].concat(r==="w"||r==="o"?[{v:"del",l:"체크 지우기",del:1}]:[]),
+      v=>{ if(v==="del") delete S.rec[k]; else S.rec[k]=v; save(); renderLeave(); toast(v==="del"?"지웠어요":v==="o"?"쉬는 날로 넣었어요":"주말 출근으로 넣었어요"); });
     return;
   }
   const ot = offOn(k), ln = leadName(), lOff = ot.some(x=>x.n===ln);
   const msg = !ot.length ? "이날 기록을 고르세요." : lOff ? "조장님이 쉬는 날이에요. 쉬는 날은 겹치게 넣을 수 없어요." : `이날은 ${ot.map(x=>x.n).join(", ")}님이 쉬어요. 쉬는 날은 겹치게 넣을 수 없어요.`;
   modal(`${md(d)} ${DOW[d.getDay()]}요일`, msg,
-    [{v:"5",l:"5시 퇴근",s:"통상 8"},{v:"6",l:"6시 퇴근",s:"통상 8 + 연장 1.5"},{v:"m",l:"월차"},{v:"h",l:"반차"},{v:"a",l:"연차",full:1},{v:"sp",l:"특이사항",s:"3시 퇴근 · 결근 · 조퇴 · 장기 휴무",full:1}]
+    [{v:"5",l:"5시 퇴근",s:"통상 8"},{v:"6",l:"6시 퇴근",s:"통상 8 + 연장 1.5"},{v:"a",l:"연차",full:1,big:1},{v:"h",l:"반차"},{v:"m",l:"월차",s:"입사 1년 전"},{v:"sp",l:"특이사항",s:"3시 퇴근 · 결근 · 조퇴 · 장기 휴무",full:1}]
       .map(o=>({...o,on:r===o.v})).concat(r?[{v:"del",l:"기록 지우기",del:1}]:[]),
     v=>{ if(v==="sp") return special(k, renderLeave);
       if(OFF.includes(v) && ot.length && r!==v) return setTimeout(()=>blockSheet(k, v, ot, lOff), 60);
@@ -1235,7 +1240,7 @@ function appDay(d,k){
   if(r==="e"){ o.tong=EH[(S.memo[k]||{}).out]||0; o.mark="조퇴"; }
   if(r==="x"||r==="l") o.mark=LBL[r];
   if(r==="w" && dw!==0) o.gongsu=12;
-  if(dw===0 && (!r||r==="w") && weekState(d)!=="no") o.mark="주차";
+  if(dw===0 && (!r||r==="w"||r==="o") && weekState(d)!=="no") o.mark="주차";
   return o;
 }
 function descr(o){
@@ -1272,7 +1277,7 @@ function cellsFor(d,k,r,t){
   if(dw===0 && !fut){ const s = weekState(d), w = r==="w"?"<small>출근</small>":"";
     if(s!=="no") return `<td colspan="3" class="stamp ${s==="ask"?"ask":""}">주차${s==="ask"?"?":""}${w}</td>`;
     if(r==="w") return `<td colspan="3" class="stamp">출근</td>`; }
-  if(dw===6 && !fut && !r) return `<td colspan="3" class="stamp">유휴</td>`;
+  if(dw===6 && !fut && (!r||r==="o")) return `<td colspan="3" class="stamp">유휴</td>`;
   if(h && dw!==0 && dw!==6) return `<td colspan="3" class="hol">${h[0]}</td>`;
   if(!fut && dw>=1 && dw<=5 && k>=firstKey()) return `<td colspan="3" class="miss">체크 없음</td>`;
   return `<td></td><td></td><td></td>`;
@@ -1353,7 +1358,7 @@ function dayModal(k){
   const d = new Date(k+"T00:00:00"), r = S.rec[k], rest = isRest(d,k);
   const opts = rest
     ? [{v:"w",l:"출근했어요",s:d.getDay()===0?"일급이라 출근만 체크":"주말·공휴일 12",full:1}]
-    : [{v:"5",l:"5시 퇴근",s:"통상 8"},{v:"6",l:"6시 퇴근",s:"통상 8 + 연장 1.5"},{v:"m",l:"월차"},{v:"h",l:"반차"},{v:"a",l:"연차",full:1},{v:"sp",l:"특이사항",s:"3시 퇴근 · 결근 · 조퇴 · 장기 휴무",full:1}];
+    : [{v:"5",l:"5시 퇴근",s:"통상 8"},{v:"6",l:"6시 퇴근",s:"통상 8 + 연장 1.5"},{v:"a",l:"연차",full:1,big:1},{v:"h",l:"반차"},{v:"m",l:"월차",s:"입사 1년 전"},{v:"sp",l:"특이사항",s:"3시 퇴근 · 결근 · 조퇴 · 장기 휴무",full:1}];
   modal(`${md(d)} ${DOW[d.getDay()]}요일`, rest?"주말·공휴일은 5시 퇴근이에요.":"이날 기록을 고르세요.",
     opts.map(o=>({...o,on:r===o.v})).concat(r?[{v:"del",l:"기록 지우기",del:1}]:[]),
     v=>{ if(v==="sp") return special(k, renderSheet); if(v==="del") delete S.rec[k]; else S.rec[k]=v; save(); renderSheet(); toast(v==="del"?"지웠어요":"고쳤어요"); });
@@ -1448,7 +1453,7 @@ function special(k, after, preset){
 
 /* ===== 조장: 우리 조 현황 ===== */
 
-const TST = {"6":"6시","5":"5시",h:"반차",e:"조퇴",m:"월차",a:"연차",x:"결근",l:"휴무","":"아직"};
+const TST = {"6":"6시","5":"5시",h:"반차",e:"조퇴",m:"월차",a:"연차",x:"결근",l:"휴무",w:"주말 출근",o:"쉬어요","":"아직"};
 const OFFS = ["m","a","x","l"];
 function newTeam(name, id){ return {id: id || "t"+Date.now().toString(36)+Math.random().toString(36).slice(2,5), name, ban:"", conf:null, leaves:{}, crew:[]}; }
 if(!S.co) S.co = {name:"", bans:[], teams:[newTeam("","t1")], setup:false};
@@ -1476,7 +1481,7 @@ function renderTeam(){
 }
 function teamToday(){
   const L = members(), c = tcount(L);
-  const G = [["5","5시 퇴근",p=>p.r==="5"],["6","6시 퇴근",p=>p.r==="6"],["m","월차",p=>p.r==="m"],["a","연차",p=>p.r==="a"],["h","반차",p=>p.r==="h"],["s","특이사항",p=>["x","e","l"].includes(p.r),1],["n","미체크",p=>p.r==="",1]];
+  const G = [["5","5시 퇴근",p=>p.r==="5"],["6","6시 퇴근",p=>p.r==="6"],["a","연차",p=>p.r==="a"],["h","반차",p=>p.r==="h"],["m","월차",p=>p.r==="m"],["w","주말 출근",p=>p.r==="w",1],["o","쉬어요",p=>p.r==="o",1],["s","특이사항",p=>["x","e","l"].includes(p.r),1],["n","미체크",p=>p.r==="",1]];
   const rows = G.map(([k,label,f,hideEmpty])=>{
     const arr = L.filter(f); if(hideEmpty && !arr.length) return "";
     const names = arr.length ? arr.map(p=>`<button class="tnm${p.me?" me":""}" data-i="${L.indexOf(p)}">${esc(p.n)}${k==="s"?`<small>${TST[p.r]}</small>`:""}${p.role==="leader"?`<small>조장</small>`:p.sub?`<small>부조장</small>`:""}</button>`).join("") : `<span class="tnone">없음</span>`;
@@ -1542,7 +1547,7 @@ function leadDay(k){
 function leadPick(k, n){
   const d = new Date(k+"T00:00:00"), cur = teamLeaves(d.getFullYear(), d.getMonth()).find(o=>o.k===k && o.n===n);
   modal(`${esc(n)} · ${md(d)}`, "어떤 쉬는 날인가요? 조원 화면에도 같이 들어가요.",
-    [{v:"m",l:"월차"},{v:"h",l:"반차"},{v:"a",l:"연차"},{v:"x",l:"결근"},{v:"l",l:"휴무",s:"장기 휴무",full:1}].map(o=>({...o,on:cur&&cur.t===o.v})).concat(cur?[{v:"del",l:"쉬는 날 지우기",del:1}]:[]),
+    [{v:"a",l:"연차",full:1,big:1},{v:"h",l:"반차"},{v:"m",l:"월차"},{v:"x",l:"결근"},{v:"l",l:"휴무",s:"장기 휴무"}].map(o=>({...o,on:cur&&cur.t===o.v})).concat(cur?[{v:"del",l:"쉬는 날 지우기",del:1}]:[]),
     v=>{ if(v==="del") return leadSet(k,n,null);
       setTimeout(()=>modal("사유", "조장님 화면에만 보여요.", [{v:"병원",l:"병원"},{v:"가족 일",l:"가족 일"},{v:"개인 사정",l:"개인 사정"},{v:"기타",l:"기타"},{v:"",l:"적지 않음",full:1}], rs=>leadSet(k,n,v,rs)), 60); });
 }
@@ -1610,7 +1615,7 @@ function bindTeam(){
 }
 function tMem(i){
   const L = members(), p = L[i];
-  const opts = [{v:"5",l:"5시"},{v:"6",l:"6시"},{v:"m",l:"월차"},{v:"h",l:"반차"},{v:"x",l:"결근"},{v:"e",l:"조퇴"}].map(o=>({...o,on:p.r===o.v}));
+  const opts = [{v:"5",l:"5시"},{v:"6",l:"6시"},{v:"a",l:"연차",full:1},{v:"h",l:"반차"},{v:"m",l:"월차"},{v:"x",l:"결근"},{v:"e",l:"조퇴"}].map(o=>({...o,on:p.r===o.v}));
   if(p._i>=0 && p.role!=="leader") opts.push({v:"sub",l:p.sub?"부조장 해제":"부조장으로 지정",full:1});
   if(p.r) opts.push({v:"",l:"체크 지우기",del:1});
   const sub = p.me ? "내 오늘 기록이에요." : p.reason ? `사유: ${p.reason}${p.called?", 조장에게 연락함":""}` : (p.note||"조장님이 대신 체크할 수 있어요.");
@@ -1836,6 +1841,10 @@ const I18N = {
 "조원이신가요? 조장님께 받은":["Team member? Please open the","Работник? Откройте","A'zomisiz? Brigadirdan olgan","සාමාජිකයෙක්ද? නායකයාගෙන් ලැබුණු"],
 "카톡 링크":["KakaoTalk link","ссылку из KakaoTalk","KakaoTalk havolasi","KakaoTalk සබැඳිය"],
 "로 들어와 주세요.":[" from your leader."," от бригадира."," orqali kiring."," හරහා ඇතුළු වන්න."],
+"쉬어요":["Day off","Отдыхаю","Dam olaman","නිවාඩුයි"],
+"출근 안 해요":["Not working","Не работаю","Ishlamayman","වැඩට නොඑමි"],
+"쉼":["Off","Вых","Dam","නිවාඩු"],
+"체크 지우기":["Clear","Удалить отметку","Belgini o'chirish","සලකුණ මකන්න"],
 "미체크":["Not checked","Не отмечено","Belgilanmagan","සලකුණු කර නැත"],
 "날짜를 클릭해 근무를 기록하세요":["Tap a date to record your work","Нажмите на дату, чтобы отметить работу","Ishni belgilash uchun sanani bosing","වැඩ සටහන් කිරීමට දිනයක් ඔබන්න"],
 "주말 출근":["Weekend work","Работа в выходной","Dam kuni ish","සති අන්ත වැඩ"],
@@ -2330,7 +2339,7 @@ function shift(o,n){ const d = mk(o.y,o.m+n,1); return {y:d.getFullYear(), m:d.g
 let locked = false;
 function modal(title, sub, opts, pick){
   const sh = document.getElementById("sheet");
-  sh.innerHTML = `<h3>${title}</h3><p>${sub}</p><div class="opts">${opts.map(o=>`<button class="opt ${o.on?"on":""} ${o.del?"del":""} ${o.full?"full":""}" data-v="${o.v}">${o.l}${o.s?`<small>${o.s}</small>`:""}</button>`).join("")}</div><button class="close" id="cls">닫기</button>`;
+  sh.innerHTML = `<h3>${title}</h3><p>${sub}</p><div class="opts">${opts.map(o=>`<button class="opt ${o.on?"on":""} ${o.del?"del":""} ${o.full?"full":""} ${o.big?"big":""}" data-v="${o.v}">${o.l}${o.s?`<small>${o.s}</small>`:""}</button>`).join("")}</div><button class="close" id="cls">닫기</button>`;
   sh.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{ closeDim(); pick(b.dataset.v); });
   document.getElementById("cls").onclick=closeDim;
   openDim();
