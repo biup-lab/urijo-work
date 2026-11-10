@@ -2482,9 +2482,8 @@ function resetSheet(){
   document.getElementById("cls").onclick = closeDim;
   openDim();
 }
-/* 관리자 바로가기: 주소 끝에 #admin. 이 컴퓨터에서 한 번 비밀번호를 넣으면 다음부터는 바로 들어가요. */
-function checkHash(){ if(location.hash!=="#admin") return; admT = null; admTab = "home";
-  if(adminOn || S.admDev){ adminOn = true; go("admin"); } else adminLogin(); }
+/* 관리자 바로가기: 주소 끝에 #admin 이면 비밀번호 없이 바로 관리자 화면 (대표님·임원이 링크로 봐요) */
+function checkHash(){ if(location.hash!=="#admin") return; admT = null; admTab = "home"; closeDim(); adminOn = true; go("admin"); }
 window.addEventListener("hashchange", checkHash);
 
 /* ===== 공통 ===== */
