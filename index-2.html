@@ -916,6 +916,19 @@ body.wide{padding-bottom:0}
 .tcard .tdh{margin:auto 0 16px}
 .tcard .thint{padding-top:38px}
 .meall{max-height:62vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+/* 메인 식단: 한식 한 칸, 두 줄까지 */
+.tcard .meal1 .ml{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.55;word-break:keep-all}
+/* 이번 주 식단: 큰 글씨, 넉넉한 간격 */
+.meall.big{max-height:72vh;margin:6px -4px 4px;padding:0 4px}
+.mealr2{padding:20px 16px;border-radius:16px}
+.mealr2+.mealr2{margin-top:10px}
+.mealr2{background:var(--soft)}
+.mealr2.on{background:#FFF8EE;box-shadow:inset 0 0 0 2px #F5C27A}
+.meald2{font-size:19px;font-weight:700;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.meald2 span{font-size:13px;font-weight:700;color:#B5651D;background:#FFE7C7;border-radius:8px;padding:3px 8px}
+.mealk+.mealk{margin-top:14px}
+.mealk i{display:inline-block;font-style:normal;font-size:14px;font-weight:700;color:#B5651D;margin-bottom:4px}
+.mealk p{margin:0!important;font-size:18px!important;line-height:1.7!important;color:var(--text)!important;word-break:keep-all}
 </style>
 </head>
 <body>
@@ -1145,14 +1158,13 @@ function renderToday(){
     ${r==="h"?"":`<div class="pick">
       <button class="pbtn ${r==="5"?"on":""}" data-t="5"><span class="big">5시 퇴근</span><span class="small">정상 8시간</span></button>
       <button class="pbtn ${r==="6"?"on":""}" data-t="6"><span class="big">6시 퇴근</span><span class="small">8시간 + 연장 1.5</span></button></div>`}
-    <button class="etc" id="etc">기타 ▾</button>
-    <div class="saved">${r==="5"||r==="6"?`<span>${S.autoK===k?"요일 고정으로 ":""}${r}시 퇴근으로 넣었어요</span><button id="clr">선택 취소</button>`:""}</div>`;
+    <button class="etc" id="etc">기타 ▾</button>`;
   }
-  inner += `<p class="thint">누르면 바로 저장돼요.</p>`;
   const v = document.getElementById("v-today");
   v.innerHTML = `<div class="tcard">${inner}</div>`;
-  v.querySelectorAll(".pbtn").forEach(b=>b.onclick=()=>{ S.rec[k]=b.dataset.t; S.autoK=""; save(); renderToday(); toast(b.dataset.t+"시 퇴근으로 넣었어요"); });
-  const c = document.getElementById("clr"); if(c) c.onclick=()=>{ delete S.rec[k]; (S.noAuto=S.noAuto||{})[k]=1; save(); renderToday(); };
+  v.querySelectorAll(".pbtn").forEach(b=>b.onclick=()=>{                 // 한 번 누르면 선택, 같은 버튼을 다시 누르면 지워요 (안내 문구 없음)
+    if(S.rec[k]===b.dataset.t){ delete S.rec[k]; (S.noAuto=S.noAuto||{})[k]=1; } else { S.rec[k]=b.dataset.t; S.autoK=""; }
+    save(); renderToday(); });
   const u = document.getElementById("undoLv"); if(u) u.onclick=()=>{ delete S.rec[k]; save(); renderToday(); };
   const e = document.getElementById("etc"); if(e) e.onclick=()=>modal(dl, "오늘 쉬시거나 반차면 골라주세요.",
     [{v:"a",l:"연차",s:"하루 쉼",full:1,big:1},{v:"h",l:"반차",s:"4시간 근무"},{v:"m",l:"월차",s:"하루 쉼 · 입사 1년 전"},{v:"sp",l:"특이사항",s:"3시 퇴근 · 결근 · 조퇴 · 장기 휴무",full:1},{v:"fx",l:"요일 고정 퇴근 설정",s:"예: 월·목은 늘 5시",full:1}].map(o=>({...o,on:r===o.v})).concat(LV[r]?[{v:"del",l:LV[r]+" 지우기",del:1}]:[]),
@@ -2720,7 +2732,7 @@ function mealOf(d){ const v = mealMonth(mealYm(d))[d.getDate()]; return v ? {l:v
 const mealItems = t => String(t||"").split(/\s*[,·ㆍ、\n]\s*|\s{2,}/).map(x=>x.trim()).filter(Boolean);
 function mealNow(d){ const m = mealOf(d); if(!m) return null;
   if(new Date().getHours()>=14 && m.d) return [["오늘 저녁", m.d]];                    // 오후 2시부터는 저녁 메뉴(있으면)
-  if(m.l && m.p) return [["한식", m.l], ["일품", m.p]];
+  if(m.l) return [["한식", m.l]];                                                  // 메인엔 한식만 (일품은 식단을 누르면 보여요)
   const one = m.l || m.p || m.d; return one ? [["오늘 점심", one]] : null; }
 function mealHTML(){
   const L = mealNow(new Date()); if(!L) return "";
@@ -2730,8 +2742,9 @@ function mealHTML(){
 function mealSheet(){
   const sh = document.getElementById("sheet"), t = new Date(), mon = mk(t.getFullYear(), t.getMonth(), t.getDate()-((t.getDay()+6)%7));
   const rows = []; for(let i=0;i<7;i++){ const d = mk(mon.getFullYear(), mon.getMonth(), mon.getDate()+i), m = mealOf(d); if(!m) continue;
-    rows.push(`<div class="mealr ${ymd(d)===todayK()?"on":""}"><div class="meald"><b>${d.getDate()}</b><span>${DOW[d.getDay()]}</span></div><div class="mealm">${m.l?`<p>${m.d||m.p?`<i>${m.p?"한식":"점심"}</i>`:""}${mealItems(m.l).map(esc).join(" · ")}</p>`:""}${m.p?`<p><i>일품</i>${mealItems(m.p).map(esc).join(" · ")}</p>`:""}${m.d?`<p><i>저녁</i>${mealItems(m.d).map(esc).join(" · ")}</p>`:""}</div></div>`); }
-  sh.innerHTML = `<h3>이번 주 식단</h3><p>${t.getMonth()+1}월 ${mon.getDate()}일 주</p><div class="meall">${rows.join("")||`<div class="adempty">이번 주 식단이 아직 없어요.</div>`}</div><button class="close" id="cls">닫기</button>`;
+    const blk = (lb, tx)=>tx ? `<div class="mealk"><i>${lb}</i><p>${mealItems(tx).map(esc).join(", ")}</p></div>` : "";
+    rows.push(`<div class="mealr2 ${ymd(d)===todayK()?"on":""}"><div class="meald2">${d.getMonth()+1}월 ${d.getDate()}일 ${DOW[d.getDay()]}요일${ymd(d)===todayK()?'<span>오늘</span>':""}</div>${blk(m.p||m.d?"한식":"점심", m.l)}${blk("일품", m.p)}${blk("저녁", m.d)}</div>`); }
+  sh.innerHTML = `<h3>이번 주 식단</h3><p>${t.getMonth()+1}월 ${mon.getDate()}일 주</p><div class="meall big">${rows.join("")||`<div class="adempty">이번 주 식단이 아직 없어요.</div>`}</div><button class="close" id="cls">닫기</button>`;
   document.getElementById("cls").onclick = closeDim; openDim();
 }
 /* 붙여넣은 글·표 → 날짜별 메뉴 {l:한식, p:일품, d:저녁}
