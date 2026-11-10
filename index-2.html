@@ -916,6 +916,9 @@ body.wide{padding-bottom:0}
 .tcard .tdh{margin:auto 0 16px}
 .tcard .thint{padding-top:38px}
 .meall{max-height:62vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.vab{position:fixed;left:50%;transform:translateX(-50%);top:calc(8px + env(safe-area-inset-top,0px));z-index:60;display:flex;align-items:center;gap:12px;background:#FFF4E5;color:#7A4B00;border-radius:14px;padding:8px 8px 8px 14px;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.12);white-space:nowrap}
+.vab button{border:0;background:#7A4B00;color:#fff;border-radius:10px;padding:7px 11px;font-size:13px;font-weight:700}
+body.viewas .top{padding-top:56px}
 .admst{margin:10px 16px 0;font-size:12.5px;color:var(--sub);text-align:right}
 /* 쉬는 날 계획: 우리 조 쉬는 날 */
 .crewoff{margin-top:28px;background:var(--card);border-radius:20px;padding:20px 18px 8px}
@@ -1018,11 +1021,12 @@ const josa = w => ((w.charCodeAt(w.length-1)-0xAC00)%28 ? "이에요" : "예요"
 const TEST_FLAG = false;
 const TEST = TEST_FLAG && !/github\.io$/i.test(location.hostname);
 const KEY = TEST ? "teamwork2-test" : "teamwork2-v1";
+let VIEWAS = null;   // 관리자가 다른 사람 화면을 "보기 전용"으로 볼 때 (이때는 아무것도 저장·전송 안 해요)
 
 let S = {name:"", rec:{}, wk:{}, chk:{}};
 try{ const s = JSON.parse(localStorage.getItem(KEY)||"null"); if(s && s.rec) S = Object.assign(S, s); }catch(e){}
 S.wk = S.wk||{}; S.chk = S.chk||{}; S.memo = S.memo||{};
-function save(){ try{ reconcile(); }catch(e){} try{ shDiffMine(); }catch(e){} try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast("폰 저장 공간이 부족해요"); } try{ shFlushSoon(); }catch(e){} }
+function save(){ if(VIEWAS) return; try{ reconcile(); }catch(e){} try{ shDiffMine(); }catch(e){} try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast("폰 저장 공간이 부족해요"); } try{ shFlushSoon(); }catch(e){} }
 /* ===== 조장이 넣은 휴가 ↔ 당사자 기록 동기화 ===== */
 const LVT = ["m","a","h","x","l","e"];
 function syncFromLead(){
@@ -2469,16 +2473,47 @@ function adminMem(T, i){
   if(p.role!=="leader") opts.push({v:"lead",l:"조장으로 지정",full:1});
   opts.push({v:"sub",l:p.sub?"부조장 해제":"부조장으로 지정",full:1});
   opts.push({v:"nat",l:p.nat?`국적: ${p.nat}`:"국적 정하기",full:1});
+  opts.unshift({v:"view",l:`${p.n}님 화면 보기`,s:"보기 전용 · 고치거나 저장되지 않아요",full:1});
   opts.push({v:"ren",l:"이름 바꾸기"},{v:"del",l:"명단에서 빼기",del:1});
   modal(esc(p.n), p.role==="leader"?"지금 조장이에요.":p.sub?"지금 부조장이에요.":"조원이에요.", opts, v=>{
     if(v==="lead"){ T.crew.forEach(x=>{ if(x.role==="leader") delete x.role; }); p.role = "leader"; delete p.sub; if(T.id===S.team.id){ S.leader = null; cat = "me"; } save(); renderAdmin(); toast(`${p.n}님을 조장으로 정했어요`); }
     if(v==="sub"){ const was = p.sub; T.crew.forEach(x=>delete x.sub); if(!was){ p.sub = true; if(p.role==="leader") delete p.role; } save(); renderAdmin(); toast(was?"부조장을 해제했어요":`${p.n}님을 부조장으로 정했어요`); }
     if(v==="nat") return setTimeout(()=>natModal(T,i),50);
+    if(v==="view") return viewAs(T, p.n);
     if(v==="del"){ T.crew.splice(i,1); save(); renderAdmin(); toast("명단에서 뺐어요"); }
     if(v==="ren") inputSheet("이름 바꾸기", `지금 이름: ${esc(p.n)}`, p.n, nv=>{ if(!nv) return; if(S.name===p.n && T.id===S.team.id) S.name = nv; p.n = nv; save(); applyRole(); renderAdmin(); toast("이름을 바꿨어요"); });
   });
 }
 
+/* 관리자: 조원·조장 한 사람의 앱 화면을 서버 기록 그대로 보기 (보기 전용) */
+async function viewAs(T, name){
+  if(!T.tid || !shOn() || !FB.m || !FB.aauth || !FB.aauth.currentUser){ toast(T.tid ? "구글 로그인 후에 볼 수 있어요" : "서버 기록이 없는 조예요"); return; }
+  toast("불러오는 중…");
+  let rows = [];
+  try{ const {collection, query, where, getDocs} = FB.m, months = yms(shFrom(), 6);
+    const sn = await withTO(getDocs(query(collection(FB.adb, "u2recs"), where("tid","==",T.tid), where("ym","in",months))), 20000);
+    rows = sn.docs.map(d=>d.data()).filter(r=>r.name); }
+  catch(e){ console.warn("[viewas]", e && e.message); toast("기록을 못 불러왔어요"); return; }
+  const tk = todayK(), leaves = {};
+  rows.forEach(r=>{ if(!LVT.includes(r.code)) return; const by = r.by && r.by!==r.name ? r.by : null;
+    (leaves[r.date] = leaves[r.date]||[]).push({n:r.name, t:r.code, reason:r.reason||"", by, at:r.at, ok:by ? true : !!r.ok, cok:!!by}); });
+  const crew = T.crew.map(p=>{ const r = rows.find(x=>x.date===tk && x.name===p.n); return {n:p.n, r:r?r.code:"", role:p.role, sub:p.sub, nat:p.nat}; });
+  if(!crew.some(p=>p.n===name)) crew.push({n:name, r:""});
+  VIEWAS = {n:name, team:T.name};
+  const rec = {}, memo = {}; rows.filter(r=>r.name===name).forEach(r=>{ if(r.code) rec[r.date] = r.code; if(r.reason) memo[r.date] = {reason:r.reason}; });
+  S.co.teams.push({id:"viewas", tid:T.tid, name:T.name, ban:T.ban||"", conf:null, leaves, crew, notes:[]});
+  Object.assign(S, {myTeam:"viewas", name, rec, memo, noAuto:{}, autoK:"", byLead:{}, shq:{}, okq:{}});
+  adminOn = false; closeDim(); history.replaceState(null, "", location.pathname);
+  const bar = document.createElement("div"); bar.className = "vab";
+  bar.innerHTML = `<span><b>${esc(name)}</b>님 화면 · 보기 전용</span><button>관리자로 돌아가기</button>`;
+  bar.querySelector("button").onclick = ()=>{ location.href = location.pathname+"#admin"; location.reload(); };
+  document.body.appendChild(bar); document.body.classList.add("viewas");
+  cat = "me"; applyRole(); go("today");
+}
+/* 보기 전용일 때: 화면 이동·달 넘기기·식단 보기만 되고, 나머지 버튼은 막아요 */
+document.addEventListener("click", e=>{ if(!VIEWAS) return; const el = e.target.closest("button,input,textarea,select,.cell"); if(!el) return;
+  if(el.closest("#navMe,#navTeam,.vab,.mnav,#topRight,#mealb,#cls,.close,#langb")) return;
+  e.preventDefault(); e.stopPropagation(); toast("보기 전용이에요"); }, true);
 function closeAdmin(){ if(location.hash==="#admin") history.replaceState(null, "", location.pathname+location.search); applyRole(); go(cat==="team"?"team":"today"); }
 function adminSettings(){
   const sh = document.getElementById("sheet");
@@ -2594,7 +2629,7 @@ const FB_CFG = {
 const FB_VER = "10.12.2";
 const FB = {p:null, m:null, db:null, auth:null, adb:null, aauth:null, lk:"", un:[], emu:null};
 const SH = {busy:false, pulling:false, timer:null, last:0, err:false, all:null};
-const shOn = () => !TEST && !!FB_CFG.apiKey;
+const shOn = () => !TEST && !VIEWAS && !!FB_CFG.apiKey;
 const shTeam = () => (S.team && S.team.name) || "";
 const shTid = () => (S.team && S.team.tid) || "";
 const shFrom = () => { const n = new Date(); return ymd(mk(n.getFullYear(), n.getMonth()-1, 1)); };
@@ -2725,7 +2760,7 @@ function allToday(){
 }
 function shRow(date, name, code, reason, by){ return {id:date+"|"+name, date, team:shTeam(), name, code:code||"", reason:reason||"", by:by||S.name, at:Date.now()}; }
 function shQueue(rows){ if(!shOn()) return; S.shq = S.shq||{}; rows.forEach(r=>{ S.shq[r.id] = r; }); }
-function shKeep(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+function shKeep(){ if(VIEWAS) return; try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
 /* 내 기록(S.rec)이 바뀐 날짜만 골라서 보낼 줄에 넣기 */
 function shDiffMine(){
   if(!shOn() || !S.name || !S.team) return;
@@ -2815,6 +2850,7 @@ function mealSheet(){
     rows.push(`<section class="mday2 ${ymd(d)===todayK()?"on":""}"><h3 class="mdh"><i></i>${d.getMonth()+1}월 ${d.getDate()}일 ${DOW[d.getDay()]}요일${ymd(d)===todayK()?'<span>오늘</span>':""}</h3><div class="mcards">${blk(m.p||m.d?"한식":"점심", m.l)}${blk("일품", m.p)}${blk("저녁", m.d)}</div></section>`); }
   sh.innerHTML = `<h3>이번 주 식단</h3><p>${t.getMonth()+1}월 ${mon.getDate()}일 주</p><div class="meall big">${rows.join("")||`<div class="adempty">이번 주 식단이 아직 없어요.</div>`}</div><button class="close" id="cls">닫기</button>`;
   document.getElementById("cls").onclick = closeDim; openDim();
+  const ml = sh.querySelector(".meall"), on = sh.querySelector(".mday2.on"); if(ml && on) ml.scrollTop = on.getBoundingClientRect().top - ml.getBoundingClientRect().top + ml.scrollTop;   // 오늘 메뉴가 맨 위에
 }
 /* 붙여넣은 글·표 → 날짜별 메뉴 {l:한식, p:일품, d:저녁}
    - 회사 식단 시트를 그대로 복사해도 돼요: "11/10 | 화 | 쌀밥/국 | 메인 | 반찬 | 반찬 | 김치" (제목·머리글 줄, "메뉴 없음"은 건너뜀)
