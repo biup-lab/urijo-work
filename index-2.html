@@ -1156,7 +1156,7 @@ function renderToday(){
   } else {
     inner = `${wxHTML()}${mealHTML()}${allBan()}${leadOffToday()}<h1 class="tdh">${dl}</h1>${r==="h"?`<p class="qsub">오늘은 반차예요</p>`:r==="e"?`<p class="qsub">오늘 ${((S.memo[k]||{}).out>12?(S.memo[k]||{}).out-12:(S.memo[k]||{}).out)}시 조퇴로 체크돼 있어요</p>`:""}
     ${r==="h"?"":`<div class="pick">
-      <button class="pbtn ${r==="5"?"on":""}" data-t="5"><span class="big">5시 퇴근</span><span class="small">정상 8시간</span></button>
+      <button class="pbtn ${r==="5"?"on":""}" data-t="5"><span class="big">5시 퇴근</span><span class="small">8시간</span></button>
       <button class="pbtn ${r==="6"?"on":""}" data-t="6"><span class="big">6시 퇴근</span><span class="small">8시간 + 연장 1.5</span></button></div>`}
     <button class="etc" id="etc">기타 ▾</button>`;
   }
@@ -1306,7 +1306,7 @@ function leaveModal(k){
   const ot = offOn(k), ln = leadName(), lOff = ot.some(x=>x.n===ln);
   const msg = !ot.length ? "이날 기록을 고르세요." : lOff ? "조장님이 쉬는 날이에요. 쉬는 날은 겹치게 넣을 수 없어요." : `이날은 ${ot.map(x=>x.n).join(", ")}님이 쉬어요. 쉬는 날은 겹치게 넣을 수 없어요.`;
   modal(`${md(d)} ${DOW[d.getDay()]}요일`, msg,
-    [{v:"5",l:"5시 퇴근",s:"통상 8"},{v:"6",l:"6시 퇴근",s:"통상 8 + 연장 1.5"},{v:"a",l:"연차",full:1,big:1},{v:"h",l:"반차"},{v:"m",l:"월차",s:"입사 1년 전"},{v:"sp",l:"특이사항",s:"3시 퇴근 · 결근 · 조퇴 · 장기 휴무",full:1}]
+    [{v:"5",l:"5시 퇴근"},{v:"6",l:"6시 퇴근"},{v:"a",l:"연차",full:1,big:1},{v:"h",l:"반차"},{v:"m",l:"월차",s:"입사 1년 전"},{v:"sp",l:"특이사항",s:"3시 퇴근 · 결근 · 조퇴 · 장기 휴무",full:1}]
       .map(o=>({...o,on:r===o.v})).concat(r?[{v:"del",l:"기록 지우기",del:1}]:[]),
     v=>{ if(v==="sp") return special(k, renderLeave);
       if(OFF.includes(v) && ot.length && r!==v) return setTimeout(()=>blockSheet(k, v, ot, lOff), 60);
@@ -1460,7 +1460,7 @@ function dayModal(k){
   const d = new Date(k+"T00:00:00"), r = S.rec[k], rest = isRest(d,k);
   const opts = rest
     ? [{v:"w",l:"출근했어요",s:d.getDay()===0?"일급이라 출근만 체크":"주말·공휴일 12",full:1}]
-    : [{v:"5",l:"5시 퇴근",s:"통상 8"},{v:"6",l:"6시 퇴근",s:"통상 8 + 연장 1.5"},{v:"a",l:"연차",full:1,big:1},{v:"h",l:"반차"},{v:"m",l:"월차",s:"입사 1년 전"},{v:"sp",l:"특이사항",s:"3시 퇴근 · 결근 · 조퇴 · 장기 휴무",full:1}];
+    : [{v:"5",l:"5시 퇴근"},{v:"6",l:"6시 퇴근"},{v:"a",l:"연차",full:1,big:1},{v:"h",l:"반차"},{v:"m",l:"월차",s:"입사 1년 전"},{v:"sp",l:"특이사항",s:"3시 퇴근 · 결근 · 조퇴 · 장기 휴무",full:1}];
   modal(`${md(d)} ${DOW[d.getDay()]}요일`, rest?"주말·공휴일은 5시 퇴근이에요.":"이날 기록을 고르세요.",
     opts.map(o=>({...o,on:r===o.v})).concat(r?[{v:"del",l:"기록 지우기",del:1}]:[]),
     v=>{ if(v==="sp") return special(k, renderSheet); if(v==="del") delete S.rec[k]; else S.rec[k]=v; save(); renderSheet(); toast(v==="del"?"지웠어요":"고쳤어요"); });
@@ -1874,6 +1874,7 @@ const I18N = {
 "5시 퇴근":["5 PM","17:00","17:00","සවස 5"],
 "6시 퇴근":["6 PM","18:00","18:00","සවස 6"],
 "정상 8시간":["Regular 8 h","Обычно 8 ч","Oddiy 8 soat","සාමාන්‍ය පැය 8"],
+"8시간":["8 h","8 ч","8 soat","පැය 8"],
 "8시간 + 연장 1.5":["8 h + overtime 1.5","8 ч + сверхурочно 1,5","8 soat + qoʻshimcha 1.5","පැය 8 + අතිකාල 1.5"],
 "기타 ▾":["More ▾","Ещё ▾","Boshqa ▾","තවත් ▾"],
 "누르면 바로 저장돼요.":["Saved as soon as you tap.","Сохраняется сразу после нажатия.","Bosishingiz bilan saqlanadi.","ඔබන විටම සුරැකේ."],
