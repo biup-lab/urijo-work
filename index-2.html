@@ -2243,7 +2243,7 @@ function renderAdminHome(){
   const body = `
     <div class="dtop">
       <div class="dhero"><h2>조원이 5시·6시만 누르면<br><em>출근표와 근태 통계</em>가 채워져요</h2>
-        ${(()=>{ const tc = tcount(members()); return `<div class="dmock"><div class="h">${esc(S.team&&S.team.name?S.team.name:"우리 조")} · 오늘 현황</div>
+        ${(()=>{ const ta = allToday(), tc = ta || tcount(members()); return `<div class="dmock"><div class="h">${ta?esc(C.name||"우리 회사")+" 전체":esc(S.team&&S.team.name?S.team.name:"우리 조")} · 오늘 현황</div>
           <div class="r"><span>5시 퇴근</span><b>${tc[5]}명</b></div><div class="r"><span>6시 퇴근</span><b>${tc[6]}명</b></div><div class="r"><span>월차 · 휴가</span><b>${tc.off+tc.half}명</b></div><div class="r"><span>아직 체크 안 함</span><b>${tc.n}명</b></div></div>`; })()}
         <button class="dcta" data-tab="report">근태 리포트 보기 ›</button></div>
       <div class="dquick">
@@ -2606,9 +2606,28 @@ async function shPullAll(){
     const from = ymd(workDays()[0] || new Date()), months = yms(from, 3);
     const [r, m] = await Promise.all([getDocs(query(collection(FB.adb, "u2recs"), where("ym","in",months))), getDocs(collectionGroup(FB.adb, "members"))]);
     const rows = r.docs.map(d=>d.data()).filter(x=>x.date>=from && x.code);
-    SH.all = {ok:true, rows, members:m.docs.map(d=>d.data()).filter(x=>x.tid)}; SH.err = false; if(view==="admin") renderAdmin();
+    SH.all = {ok:true, rows, members:m.docs.map(d=>d.data()).filter(x=>x.tid)}; SH.err = false; shMergeAll(); if(view==="admin") renderAdmin();
   }catch(e){ SH.err = true; console.warn("[admin]", e && e.message); }
   shStatus();
+}
+/* 관리자: 서버에 있는 조·조원을 회사 조직(반·조 전체)에 채워 넣기 — 조장·조원이 가입한 조가 바로 보이게 */
+function shMergeAll(){
+  if(!SH.all) return; const nz = x=>String(x||"").replace(/\s/g,""), C = S.co; let ch = false;
+  const find = (tid, name)=>C.teams.find(t=>t.tid && t.tid===tid) || C.teams.find(t=>nz(t.name)===nz(name));
+  const put = (tid, team, name, role)=>{ if(!team || !name) return;
+    let t = find(tid, team); if(!t){ t = newTeam(team); if(tid) t.tid = tid; C.teams.push(t); ch = true; } else if(tid && !t.tid && t.id!==S.myTeam){ t.tid = tid; ch = true; }
+    let p = t.crew.find(x=>x.n===name); if(!p){ p = {n:name, r:""}; t.crew.push(p); ch = true; }
+    if(role==="조장" && !lead(t)){ p.role = "leader"; ch = true; } };
+  (SH.all.members||[]).forEach(m=>put(m.tid, m.team, m.name, m.role));
+  (SH.all.rows||[]).forEach(r=>put(r.tid, r.team, r.name));
+  if(ch) shKeep();
+}
+/* 관리자 첫 화면: 오늘 회사 전체 (서버 기록 기준) */
+function allToday(){
+  if(!(shOn() && SH.all)) return null; const tk = todayK(), c = {6:0,5:0,half:0,off:0,n:0}, seen = new Set();
+  (SH.all.rows||[]).forEach(r=>{ if(r.date!==tk) return; const k = r.team+"|"+r.name; if(seen.has(k)) return; seen.add(k);
+    if(r.code==="6") c[6]++; else if(r.code==="5") c[5]++; else if(r.code==="h"||r.code==="e") c.half++; else if(r.code && r.code!=="o") c.off++; });
+  const total = S.co.teams.reduce((s,t)=>s+t.crew.length,0); c.n = Math.max(0, total-seen.size); return c;
 }
 function shRow(date, name, code, reason, by){ return {id:date+"|"+name, date, team:shTeam(), name, code:code||"", reason:reason||"", by:by||S.name, at:Date.now()}; }
 function shQueue(rows){ if(!shOn()) return; S.shq = S.shq||{}; rows.forEach(r=>{ S.shq[r.id] = r; }); }
