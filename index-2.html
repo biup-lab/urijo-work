@@ -852,6 +852,11 @@ table.st{width:100%;border-collapse:collapse;font-size:14px;min-width:560px}
 .mealm i{font-style:normal;font-size:11px;font-weight:600;color:#B5651D;background:#FFF3E0;border-radius:5px;padding:1px 5px;margin-right:6px}
 .tcard .meal~.pick{min-height:118px}
 .tcard .meal~.tdh{margin-bottom:14px}
+
+/* 식단: 메인에는 글자 한 줄만 */
+.meal1{display:block;width:100%;border:0;background:none;padding:0 4px;margin:-6px 0 18px;font-size:13px;color:var(--sub);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meal1 span{font-weight:600;color:var(--text);margin-right:6px}
+.tcard .meal1~.pick{min-height:140px}
 </style>
 </head>
 <body>
@@ -2623,7 +2628,7 @@ function mealNow(d){ const m = mealOf(d); if(!m) return null;
 function mealHTML(){
   const m = mealNow(new Date()); if(!m || !m.text) return "";
   const it = mealItems(m.text);
-  return `<button class="meal" id="mealb"><span class="meali">${MEAL_ICO}</span><span class="mealt"><small>${m.label}</small><b>${esc(it[0]||"")}</b>${it.length>1?`<em>${it.slice(1).map(esc).join(" · ")}</em>`:""}</span><span class="mealg">›</span></button>`;
+  return `<button class="meal1" id="mealb"><span>${m.label}</span>${it.map(esc).join(", ")}</button>`;
 }
 function mealSheet(){
   const sh = document.getElementById("sheet"), t = new Date(), mon = mk(t.getFullYear(), t.getMonth(), t.getDate()-((t.getDay()+6)%7));
