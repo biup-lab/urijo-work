@@ -916,6 +916,19 @@ body.wide{padding-bottom:0}
 .tcard .tdh{margin:auto 0 16px}
 .tcard .thint{padding-top:38px}
 .meall{max-height:62vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+/* 쉬는 날 계획: 우리 조 쉬는 날 */
+.crewoff{margin-top:28px;background:var(--card);border-radius:20px;padding:20px 18px 8px}
+.crewoff h2{margin:0 0 8px;font-size:18px;font-weight:700;color:var(--text)}
+.crewoff h2 small{font-size:13px;font-weight:500;color:var(--sub);margin-left:6px}
+.cor{display:flex;gap:14px;padding:16px 0;border-top:1px solid var(--line);align-items:flex-start}
+.crewoff h2+.cor{border-top:0}
+.con{flex:none;width:92px;font-size:17px;font-weight:700;color:var(--text);line-height:1.5;word-break:keep-all}
+.con em{display:inline-block;font-style:normal;font-size:11.5px;font-weight:700;color:var(--discovery);background:var(--soft);border-radius:6px;padding:1px 6px;margin-left:5px;vertical-align:2px}
+.con em.me{color:var(--sub)}
+.cods{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:8px}
+.cod{font-size:15px;color:var(--sub);background:var(--soft);border-radius:10px;padding:5px 10px;line-height:1.4}
+.cod b{font-weight:700;color:var(--text);margin-right:6px}
+.coe{font-size:15px;color:#B0B8C1;line-height:1.5;padding-top:1px}
 /* 메인 식단: 한식 한 칸, 두 줄까지 */
 .tcard .meal1 .ml{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.55;word-break:keep-all}
 /* 이번 주 식단: 큰 글씨, 넉넉한 간격 */
@@ -1286,7 +1299,8 @@ function renderLeave(){
     ${lastFill && lastFill.ym===y+"-"+m ? `<p class="undof">평일을 ${lastFill.t}시로 채웠어요. 날짜를 눌러 하나씩 바꿀 수 있어요. <button class="lnk" id="undoFill">되돌리기</button></p>`:""}
     <div class="cal"><div class="wk"><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div><div>일</div></div><div class="grid">${cells}</div>
       <div class="legend"><span><i class="c-a"></i>연차</span><span><i class="c-h"></i>반차</span><span><i class="c-m"></i>월차</span><span><i class="c-w"></i>주말 출근</span><span><i style="background:#E3E7EC"></i>다른 조원</span></div></div>
-    <div class="plist">${rows}</div>`;
+    <div class="plist">${rows}</div>
+    ${crewOffHTML(y,m)}`;
   document.getElementById("lp").onclick=()=>{ lm = shift(lm,-1); renderLeave(); };
   document.getElementById("ln").onclick=()=>{ lm = shift(lm,1); renderLeave(); };
   document.querySelectorAll("#v-leave [data-fill]").forEach(b=>b.onclick=()=>fillWeek(b.dataset.fill));
@@ -1314,6 +1328,17 @@ function leaveModal(k){
 }
 const OFF = ["m","a","h","l"];
 function leadName(){ const l = S.team.crew.find(p=>p.role==="leader"); return l ? l.n : ""; }
+/* 쉬는 날 계획 아래: 우리 조원 전체와 이번 달 언제 쉬는지 */
+function crewOffHTML(y,m){
+  const ln = leadName(), me = S.name, all = teamLeaves(y,m).filter(x=>OFF.includes(x.t));
+  const names = []; const add = n=>{ if(n && !names.includes(n)) names.push(n); };
+  add(ln); add(me); S.team.crew.forEach(p=>add(p.n));
+  if(names.length<2) return "";
+  const rowsC = names.map(n=>{ const L = all.filter(x=>x.n===n || (x.me && n===me));
+    const days = L.map(x=>{ const d = new Date(x.k+"T00:00:00"); return `<span class="cod"><b>${d.getDate()}일 ${DOW[d.getDay()]}</b>${LBL[x.t]}</span>`; }).join("");
+    return `<div class="cor"><div class="con">${esc(n)}${n===ln?'<em>조장</em>':""}${n===me&&n!==ln?'<em class="me">나</em>':""}</div><div class="cods">${days||'<span class="coe">쉬는 날 없음</span>'}</div></div>`; }).join("");
+  return `<section class="crewoff"><h2>우리 조 쉬는 날 <small>${m+1}월 · ${names.length}명</small></h2>${rowsC}</section>`;
+}
 function offOn(k){ const d = new Date(k+"T00:00:00"); return teamLeaves(d.getFullYear(), d.getMonth()).filter(x=>x.k===k && !x.me && x.n!==S.name && OFF.includes(x.t)); }
 function freeDays(k, n){ const out = [], d = new Date(k+"T00:00:00");
   for(let i=1;i<=21 && out.length<n;i++){ const x = mk(d.getFullYear(), d.getMonth(), d.getDate()+i), xk = ymd(x);
@@ -1988,6 +2013,9 @@ const I18N = {
 
 "시작하기":["Start","Начать","Boshlash","ආරම්භ කරන්න"],
 "조장":["Leader","Бригадир","Brigadir","නායක"],
+"우리 조 쉬는 날":["Team days off","Выходные бригады","Brigada dam olish kunlari","කණ්ඩායමේ නිවාඩු දින"],
+"쉬는 날 없음":["No days off","Нет выходных","Dam olish yoʻq","නිවාඩු නැත"],
+"나":["Me","Я","Men","මම"],
 "조장 로그인":["Leader login","Вход бригадира","Brigadir kirishi","නායක පිවිසුම"],
 "조장·부조장만 우리 조 현황을 볼 수 있어요.":["Only the leader and deputy can see team status.","Статус бригады видят только бригадир и заместитель.","Faqat brigadir va oʻrinbosar koʻra oladi.","නායක සහ උප නායකට පමණක් බැලිය හැක."],
 "PH:이름":["Name","Имя","Ism","නම"],
