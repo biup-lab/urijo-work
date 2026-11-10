@@ -874,6 +874,7 @@ table.st{width:100%;border-collapse:collapse;font-size:14px;min-width:560px}
 .tcard .q{margin:14px 0 10px}
 .tcard .qsub{margin:0 0 30px;line-height:1.6}
 .tcard .meal1{opacity:.5}
+.testb{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 2px);transform:translateX(-50%);z-index:40;background:#FFE9A8;color:#6B4E00;font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:0 0 8px 8px;pointer-events:none;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -931,7 +932,11 @@ const LV = {m:"월차",h:"반차",a:"연차"};
 const LBL = {m:"월차",h:"반차",a:"연차",w:"출근",x:"결근",e:"조퇴",l:"휴무"};
 const EH = {10:2,11:3,12:4,13:4,14:5,15:6,16:7};
 const josa = w => ((w.charCodeAt(w.length-1)-0xAC00)%28 ? "이에요" : "예요");
-const KEY = "teamwork2-v1";
+/* 테스트 모드: 확인용 파일에서만 true. 실제 주소(github.io)에서는 절대 켜지지 않아요.
+   켜지면 가입 없이 바로 열리고, 실제 Firebase에는 연결하지 않아요. */
+const TEST_FLAG = false;
+const TEST = TEST_FLAG && !/github\.io$/i.test(location.hostname);
+const KEY = TEST ? "teamwork2-test" : "teamwork2-v1";
 
 let S = {name:"", rec:{}, wk:{}, chk:{}};
 try{ const s = JSON.parse(localStorage.getItem(KEY)||"null"); if(s && s.rec) S = Object.assign(S, s); }catch(e){}
@@ -2467,7 +2472,7 @@ const FB_CFG = {
 const FB_VER = "10.12.2";
 const FB = {p:null, m:null, db:null, auth:null, adb:null, aauth:null, lk:"", un:[], emu:null};
 const SH = {busy:false, pulling:false, timer:null, last:0, err:false, all:null};
-const shOn = () => !!FB_CFG.apiKey;
+const shOn = () => !TEST && !!FB_CFG.apiKey;
 const shTeam = () => (S.team && S.team.name) || "";
 const shTid = () => (S.team && S.team.tid) || "";
 const shFrom = () => { const n = new Date(); return ymd(mk(n.getFullYear(), n.getMonth()-1, 1)); };
@@ -2719,6 +2724,13 @@ document.querySelectorAll("#navTeam button").forEach(b=>b.onclick=()=>{ tsub = b
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden && !reading) go(view); });
 applyRole();
 go(cat==="team" ? "team" : "today");
+if(TEST && !S.name){   // 테스트용 계정과 조원을 미리 넣어둠
+  S.name = "테스트조장"; S.team.name = "테스트조"; S.co.setup = true;
+  S.team.crew = [{n:"테스트조장", r:"", role:"leader"}, {n:"김철수", r:"5"}, {n:"이영희", r:"6"}, {n:"박민수", r:"6"}, {n:"최지훈", r:"a"}, {n:"한도윤", r:""}];
+  const t0 = new Date(); (S.meal = S.meal||{})[ymd(t0).slice(0,7)] = {days:{[t0.getDate()]:{l:"제육볶음, 된장국, 계란찜, 콩나물무침, 배추김치", d:""}}, at:1};
+  save(); applyRole(); go("today");
+}
+if(TEST){ const tb = document.createElement("div"); tb.className = "testb"; tb.textContent = "테스트 모드 · 실제 기록과 연결 안 됨"; document.body.appendChild(tb); }
 if(!S.name) regModal(); else checkHash();
 </script>
 </body>
