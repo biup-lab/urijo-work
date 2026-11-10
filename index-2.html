@@ -826,6 +826,32 @@ table.st{width:100%;border-collapse:collapse;font-size:14px;min-width:560px}
 /* 연차를 크게, 주말 쉼 표시 */
 .opt.big{font-size:20px;padding:20px 8px}
 #v-leave .c-o,.c-o{background:#EEF0F3;color:#6B7684}
+
+/* ===== 식단 ===== */
+.meal{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:1px solid var(--line);background:var(--card);border-radius:14px;padding:11px 12px;margin-bottom:18px;color:var(--text)}
+.meal:active{transform:scale(.99);background:var(--bg)}
+.tcard .wx+.meal{margin-top:-8px}
+.meali{flex:none;width:36px;height:36px;border-radius:11px;background:#FFF3E0;color:#B5651D;display:grid;place-items:center}
+.meali svg{width:20px;height:20px}
+.mealt{flex:1;min-width:0;display:block}
+.mealt small{display:block;font-size:11.5px;color:var(--sub);font-weight:600}
+.mealt b{display:block;font-size:17px;letter-spacing:-.02em;margin-top:1px;word-break:keep-all}
+.mealt em{display:block;font-style:normal;font-size:13px;color:var(--sub);margin-top:2px;line-height:1.4;word-break:keep-all}
+.mealg{flex:none;color:#B0B8C1;font-size:18px}
+.meall{margin:4px 0 2px}
+.mealr{display:flex;gap:12px;padding:12px 10px;border-radius:12px}
+.mealr+.mealr{border-top:1px solid var(--line)}
+.mealr.on{background:#FFF8EE;border-top-color:transparent}
+.mealr.on+.mealr{border-top-color:transparent}
+.meald{flex:none;width:34px;text-align:center}
+.meald b{display:block;font-size:17px;line-height:1.1}
+.meald span{font-size:11.5px;color:var(--sub)}
+.mealm{flex:1;min-width:0}
+.mealm p{margin:0!important;font-size:14.5px!important;color:var(--text)!important;line-height:1.5;word-break:keep-all}
+.mealm p+p{margin-top:4px!important}
+.mealm i{font-style:normal;font-size:11px;font-weight:600;color:#B5651D;background:#FFF3E0;border-radius:5px;padding:1px 5px;margin-right:6px}
+.tcard .meal~.pick{min-height:118px}
+.tcard .meal~.tdh{margin-bottom:14px}
 </style>
 </head>
 <body>
@@ -1047,7 +1073,7 @@ function renderToday(){
   } else if(isRest(d,k) && r!=="5" && r!=="6"){
     inner = `<div class="td">${dl}</div><h1 class="q">${h?"오늘은 "+h[0]+"이에요":"오늘은 "+(dw===6?"토요일":"일요일")+"이에요"}</h1><p class="qsub">${r==="w"?"출근으로 체크돼 있어요. 주말·공휴일은 5시 퇴근이에요.":"주말 출근은 쉬는 날 계획 탭에서 미리 체크할 수 있어요."}</p>`;
   } else {
-    inner = `${wxHTML()}${allBan()}${leadOffToday()}<h1 class="tdh">${dl}</h1>${r==="h"?`<p class="qsub">오늘은 반차예요</p>`:r==="e"?`<p class="qsub">오늘 ${((S.memo[k]||{}).out>12?(S.memo[k]||{}).out-12:(S.memo[k]||{}).out)}시 조퇴로 체크돼 있어요</p>`:""}
+    inner = `${wxHTML()}${mealHTML()}${allBan()}${leadOffToday()}<h1 class="tdh">${dl}</h1>${r==="h"?`<p class="qsub">오늘은 반차예요</p>`:r==="e"?`<p class="qsub">오늘 ${((S.memo[k]||{}).out>12?(S.memo[k]||{}).out-12:(S.memo[k]||{}).out)}시 조퇴로 체크돼 있어요</p>`:""}
     ${r==="h"?"":`<div class="pick">
       <button class="pbtn ${r==="5"?"on":""}" data-t="5"><span class="big">5시 퇴근</span><span class="small">정상 8시간</span></button>
       <button class="pbtn ${r==="6"?"on":""}" data-t="6"><span class="big">6시 퇴근</span><span class="small">8시간 + 연장 1.5</span></button></div>`}
@@ -1068,6 +1094,7 @@ function renderToday(){
     [{v:"a",l:"연차",s:"하루 쉼",full:1,big:1},{v:"h",l:"반차",s:"4시간 근무"},{v:"m",l:"월차",s:"하루 쉼 · 입사 1년 전"},{v:"sp",l:"특이사항",s:"3시 퇴근 · 결근 · 조퇴 · 장기 휴무",full:1},{v:"fx",l:"요일 고정 퇴근 설정",s:"예: 월·목은 늘 5시",full:1}].map(o=>({...o,on:r===o.v})).concat(LV[r]?[{v:"del",l:LV[r]+" 지우기",del:1}]:[]),
     x=>{ if(x==="sp") return special(k, renderToday); if(x==="fx") return fixedModal(myFixed(), "내 요일 고정 퇴근", renderToday); if(x==="del") delete S.rec[k]; else S.rec[k]=x; save(); renderToday(); toast(x==="del"?"지웠어요":LV[x]+"로 넣었어요"); });
   document.getElementById("goSheet").onclick=()=>go("sheet");
+  const mb = document.getElementById("mealb"); if(mb) mb.onclick = mealSheet;
 }
 
 /* ===== 2. 쉬는 날 계획 ===== */
@@ -1845,6 +1872,12 @@ const I18N = {
 "출근 안 해요":["Not working","Не работаю","Ishlamayman","වැඩට නොඑමි"],
 "쉼":["Off","Вых","Dam","නිවාඩු"],
 "체크 지우기":["Clear","Удалить отметку","Belgini o'chirish","සලකුණ මකන්න"],
+"오늘 점심":["Today's lunch","Обед сегодня","Bugungi tushlik","අද දිවා ආහාරය"],
+"오늘 저녁":["Today's dinner","Ужин сегодня","Bugungi kechki ovqat","අද රාත්‍රී ආහාරය"],
+"이번 주 식단":["This week's menu","Меню на неделю","Shu hafta menyusi","මෙම සතියේ මෙනුව"],
+"점심":["Lunch","Обед","Tushlik","දිවා"],
+"저녁":["Dinner","Ужин","Kechki","රාත්‍රී"],
+"이번 주 식단이 아직 없어요.":["No menu for this week yet.","Меню на эту неделю пока нет.","Bu hafta menyusi hali yo'q.","මෙම සතියට තවම මෙනුවක් නැත."],
 "미체크":["Not checked","Не отмечено","Belgilanmagan","සලකුණු කර නැත"],
 "날짜를 클릭해 근무를 기록하세요":["Tap a date to record your work","Нажмите на дату, чтобы отметить работу","Ishni belgilash uchun sanani bosing","වැඩ සටහන් කිරීමට දිනයක් ඔබන්න"],
 "주말 출근":["Weekend work","Работа в выходной","Dam kuni ish","සති අන්ත වැඩ"],
@@ -2064,7 +2097,7 @@ function adShell(o){
   return `<header class="sbar"><div class="sin">
       <button class="sbrand" id="adHome" aria-label="대시보드로"><span class="slogo">${ICO.logo}</span><span class="stxt"><b>팀근무관리</b><small>관리자</small></span></button>
       <button class="schip" id="coRen" title="회사 이름 바꾸기">${esc(C.name||"우리 회사")} ▾</button>
-      <div class="sact"><button class="sgear" id="adSet" aria-label="설정">${ICO.gear}<span>설정</span></button><button class="sclose" id="adX">닫기</button></div>
+      <div class="sact"><button class="sgear" id="adMeal" aria-label="식단표">${MEAL_ICO}<span>식단표</span></button><button class="sgear" id="adSet" aria-label="설정">${ICO.gear}<span>설정</span></button><button class="sclose" id="adX">닫기</button></div>
       <nav class="snav" aria-label="관리자 메뉴"><button data-tab="home" class="${o.top==="dash"?"on":""}">대시보드</button><button data-tab="org" class="${o.top==="org"?"on":""}">조직 관리</button></nav>
     </div></header>
     <div class="slay">
@@ -2090,6 +2123,7 @@ function adWire(){
   const q = id => document.getElementById(id), C = S.co;
   q("adX").onclick = closeAdmin;
   q("adSet").onclick = adminSettings;
+  if(q("adMeal")) q("adMeal").onclick = ()=>mealAdmin();
   q("adHome").onclick = ()=>{ admT = null; admTab = "home"; renderAdmin(); };
   q("coRen").onclick = ()=>inputSheet("회사 이름 바꾸기", `지금 이름: ${esc(C.name||"우리 회사")}`, C.name, v=>{ if(!v) return; C.name = v; save(); applyRole(); renderAdmin(); toast("회사 이름을 바꿨어요"); });
   if(q("adMode")) q("adMode").onclick = ()=>{ dataMode = dataMode==="sample" ? "real" : "sample"; renderAdmin(); toast(dataMode==="sample"?"샘플 데이터로 봐요 (저장 안 돼요)":"실제 기록으로 봐요"); };
@@ -2477,6 +2511,7 @@ async function shPull(){
   try{
     shFlush();
     if(!await fbJoin()) throw new Error("no team");
+    mealPull();
     const months = yms(shFrom(), 6), key = shTid()+"|"+months.join(",");
     if(FB.lk !== key){
       FB.un.forEach(u=>u()); FB.un = []; FB.lk = key;
@@ -2575,6 +2610,81 @@ window.addEventListener("online", ()=>{ shFlush(); });
 setInterval(()=>{ if(document.hidden || !shOn()) return; if(view==="admin") shPullAll(); else shPull(); }, 60000);
 document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && shOn()){ if(view==="admin") shPullAll(); else shPull(); } });
 if(shOn()) fbLoad().then(()=>{ if(S.name) shPull(); }).catch(e=>{ SH.err = true; shStatus(); });
+
+/* ===== 식단표 =====
+   대표님이 관리자 화면에서 한 달 치를 붙여넣으면(u2meals/{YYYY-MM}) 전 직원 메인 화면에 오늘 메뉴가 떠요. */
+const MEAL_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11h16a8 8 0 0 1-16 0Z"/><path d="M9 3c-.8 1 .8 2 0 3M13 3c-.8 1 .8 2 0 3M8 21h8"/></svg>';
+const mealYm = d => ymd(d).slice(0,7);
+function mealOf(d){ const m = (S.meal||{})[mealYm(d)]; const v = m && m.days && m.days[d.getDate()]; return v ? {l:v.l||"", d:v.d||""} : null; }
+const mealItems = t => String(t||"").split(/\s*[,·ㆍ、\n]\s*|\s{2,}/).map(x=>x.trim()).filter(Boolean);
+function mealNow(d){ const m = mealOf(d); if(!m) return null;
+  const late = new Date().getHours()>=14 && m.d;            // 오후 2시부터는 저녁 메뉴(있으면)
+  return {label: late ? "오늘 저녁" : "오늘 점심", text: late ? m.d : (m.l||m.d), both: !!(m.l && m.d)}; }
+function mealHTML(){
+  const m = mealNow(new Date()); if(!m || !m.text) return "";
+  const it = mealItems(m.text);
+  return `<button class="meal" id="mealb"><span class="meali">${MEAL_ICO}</span><span class="mealt"><small>${m.label}</small><b>${esc(it[0]||"")}</b>${it.length>1?`<em>${it.slice(1).map(esc).join(" · ")}</em>`:""}</span><span class="mealg">›</span></button>`;
+}
+function mealSheet(){
+  const sh = document.getElementById("sheet"), t = new Date(), mon = mk(t.getFullYear(), t.getMonth(), t.getDate()-((t.getDay()+6)%7));
+  const rows = []; for(let i=0;i<7;i++){ const d = mk(mon.getFullYear(), mon.getMonth(), mon.getDate()+i), m = mealOf(d); if(!m) continue;
+    rows.push(`<div class="mealr ${ymd(d)===todayK()?"on":""}"><div class="meald"><b>${d.getDate()}</b><span>${DOW[d.getDay()]}</span></div><div class="mealm">${m.l?`<p>${m.d?`<i>점심</i>`:""}${mealItems(m.l).map(esc).join(" · ")}</p>`:""}${m.d?`<p><i>저녁</i>${mealItems(m.d).map(esc).join(" · ")}</p>`:""}</div></div>`); }
+  sh.innerHTML = `<h3>이번 주 식단</h3><p>${t.getMonth()+1}월 ${mon.getDate()}일 주</p><div class="meall">${rows.join("")||`<div class="adempty">이번 주 식단이 아직 없어요.</div>`}</div><button class="close" id="cls">닫기</button>`;
+  document.getElementById("cls").onclick = closeDim; openDim();
+}
+/* 붙여넣은 글 → 날짜별 메뉴.  "10 제육볶음, 된장국" / "11/10(화) …" / "10일" 다음 줄에 메뉴 / "… / 저녁 …" 모두 받아요 */
+function mealParse(txt, y, m){
+  const days = {}, dim = mk(y, m+1, 0).getDate(); let cur = 0;
+  const put = (n, body)=>{ body = body.trim(); if(!body) return; const o = days[n] = days[n]||{l:"", d:""};
+    const hasD = /\/|\||저녁|석식/.test(body), sp = body.split(/\s*(?:[\/|]\s*(?:저녁|석식)?|저녁|석식)\s*[:：]?\s*/).map(x=>x.trim());
+    const l = (hasD ? sp[0] : body).replace(/^(?:점심|중식)\s*[:：]?\s*/,"").trim(), d = hasD ? sp.slice(1).filter(Boolean).join(", ") : "";
+    if(/^(?:저녁|석식)/.test(body)){ o.d = [o.d, body.replace(/^(?:저녁|석식)\s*[:：]?\s*/,"")].filter(Boolean).join(", "); return; }
+    if(l) o.l = [o.l, l].filter(Boolean).join(", "); if(d) o.d = [o.d, d].filter(Boolean).join(", "); };
+  String(txt||"").split(/\r?\n/).forEach(line=>{ line = line.replace(/\t/g,"  ").trim(); if(!line) return;
+    const g = line.match(/^(?:(\d{1,2})\s*[\/.\-월]\s*)?(\d{1,2})\s*일?\s*(?:\(?\s*[월화수목금토일]\s*(?:요일)?\s*\)?)?\s*[:：.\-]?\s*(.*)$/);
+    if(/^[\d.,]+\s*(?:kcal|칼로리|g|명|인분)\b/i.test(line) || /^(?:열량|칼로리|kcal)/i.test(line)) return;      // 열량 줄은 건너뜀
+    if(g && g[1] && +g[1]!==m+1){ cur = 0; return; }                                                          // 다른 달 날짜는 건너뜀
+    if(g && +g[2]>=1 && +g[2]<=dim){ cur = +g[2]; put(cur, g[3]||""); }
+    else if(cur) put(cur, line); });
+  Object.keys(days).forEach(k=>{ if(!days[k].l && !days[k].d) delete days[k]; });
+  return days;
+}
+function mealAdmin(off){
+  const sh = document.getElementById("sheet"), t = new Date(); off = off||0;
+  const d0 = mk(t.getFullYear(), t.getMonth()+off, 1), y = d0.getFullYear(), m = d0.getMonth(), ym = ymd(d0).slice(0,7);
+  const cur = ((S.meal||{})[ym]||{}).days||{}, has = Object.keys(cur).length;
+  const text = Object.keys(cur).map(Number).sort((a,b)=>a-b).map(n=>`${n} ${cur[n].l||""}${cur[n].d?` / ${cur[n].d}`:""}`).join("\n");
+  sh.innerHTML = `<h3>식단표 넣기</h3><p>한 달 치를 붙여넣으면 전 직원 메인 화면에 그날 메뉴가 떠요.</p>
+    <div class="two" style="margin-bottom:10px"><button data-mo="0" class="${off===0?"pri":""}">${t.getMonth()+1}월 (이번 달)</button><button data-mo="1" class="${off===1?"pri":""}">${mk(t.getFullYear(),t.getMonth()+1,1).getMonth()+1}월 (다음 달)</button></div>
+    <textarea class="adta" id="mealta" rows="9" placeholder="한 줄에 하루씩 넣어주세요.&#10;&#10;2 제육볶음, 된장국, 계란말이&#10;3 닭갈비, 미역국, 김치전&#10;4 돈까스, 우동 / 저녁 김치찌개&#10;&#10;날짜는 2 · 2일 · 11/2 · 11월 2일(월) 모두 돼요.">${esc(text)}</textarea>
+    <p class="rnote sm" id="mealpv">${has?`지금 ${has}일 치가 들어 있어요.`:"아직 넣은 식단이 없어요."}</p>
+    <button class="opt full" id="mealsv" style="width:100%;margin-top:10px;background:var(--trust);color:#fff;border-color:var(--trust)">${m+1}월 식단 저장하기</button>
+    <button class="close" id="cls">닫기</button>`;
+  const ta = document.getElementById("mealta"), pv = document.getElementById("mealpv");
+  sh.querySelectorAll("[data-mo]").forEach(b=>b.onclick=()=>mealAdmin(+b.dataset.mo));
+  ta.oninput = ()=>{ const n = Object.keys(mealParse(ta.value, y, m)).length; pv.textContent = ta.value.trim() ? (n ? `${n}일 치를 알아봤어요.` : "날짜를 못 찾았어요. 줄 맨 앞에 날짜를 넣어주세요.") : "비우고 저장하면 이 달 식단이 지워져요."; };
+  document.getElementById("cls").onclick = closeDim;
+  document.getElementById("mealsv").onclick = async ()=>{
+    const days = mealParse(ta.value, y, m), n = Object.keys(days).length;
+    if(ta.value.trim() && !n){ toast("날짜를 못 찾았어요"); return; }
+    (S.meal = S.meal||{})[ym] = {days, at:Date.now()}; shKeep(); closeDim();
+    if(!shOn()){ toast(`${m+1}월 식단 ${n}일 치를 이 폰에 넣었어요`); return; }
+    try{ await fbLoad(); if(!FB.aauth.currentUser) await fbAdminSignIn();
+      await withTO(FB.m.setDoc(FB.m.doc(FB.adb, "u2meals", ym), {days, at:Date.now()}), 15000);
+      toast(`${m+1}월 식단 ${n}일 치를 올렸어요`);
+    }catch(e){ console.warn("[meal]", e && e.message); toast("이 폰에만 넣었어요. 전 직원에게 올리려면 구글 로그인과 권한이 필요해요"); }
+  };
+  openDim();
+}
+/* 전 직원: 이번 달(과 다음 달) 식단 받아오기 — 하루에 몇 번만 */
+async function mealPull(){
+  if(!shOn() || !FB.m || (SH.mealAt && Date.now()-SH.mealAt < 3*3600e3)) return; SH.mealAt = Date.now();
+  try{ const t = new Date(), yms2 = [ymd(mk(t.getFullYear(), t.getMonth(), 1)).slice(0,7), ymd(mk(t.getFullYear(), t.getMonth()+1, 1)).slice(0,7)]; let ch = false;
+    for(const ym of yms2){ const sn = await withTO(FB.m.getDoc(FB.m.doc(FB.db, "u2meals", ym)), 15000); if(!sn.exists()) continue; const v = sn.data();
+      if(!S.meal || !S.meal[ym] || S.meal[ym].at!==v.at){ (S.meal = S.meal||{})[ym] = {days:v.days||{}, at:v.at}; ch = true; } }
+    if(ch){ shKeep(); if(view==="today") shRerender(); }
+  }catch(e){ SH.mealAt = 0; console.warn("[meal]", e && e.message); }
+}
 
 function go(v){
   view = v; if(v!=="admin"){ syncFromLead(); syncAllOut(); wxLoad(); shPull(); } else shPullAll();
