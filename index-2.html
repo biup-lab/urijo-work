@@ -713,7 +713,7 @@ table.st{width:100%;border-collapse:collapse;font-size:14px;min-width:560px}
 /* ===== 디자인 검토 반영 ===== */
 #v-team>:first-child{margin-top:16px}
 /* 오늘 화면: 카드가 화면 높이를 채우도록 (헤더·하단탭·제작표기 제외) */
-#v-today:not([hidden]){display:flex;flex-direction:column;min-height:calc(100vh - 249px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));min-height:calc(100dvh - 249px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
+#v-today:not([hidden]){display:flex;flex-direction:column;min-height:calc(100vh - 258px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));min-height:calc(100dvh - 258px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
 .tcard{flex:1 0 auto;min-height:0;padding:20px 18px 22px;justify-content:flex-start}
 .tcard .tdh,.tcard>.td:first-child{margin-top:auto}
 .tcard .pick{flex:1 1 auto;min-height:150px;max-height:210px}
@@ -857,6 +857,22 @@ table.st{width:100%;border-collapse:collapse;font-size:14px;min-width:560px}
 .meal1{display:block;width:100%;border:0;background:none;padding:0 4px;margin:-6px 0 18px;font-size:13px;color:var(--sub);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .meal1 span{font-weight:600;color:var(--text);margin-right:6px}
 .tcard .meal1~.pick{min-height:140px}
+
+/* ===== 오늘 화면: 퇴근 버튼이 주인공, 간격 넉넉하게 ===== */
+.tcard{padding:26px 22px 26px}
+.tcard .wx{margin-bottom:16px}
+.tcard .meal1{margin:0 0 4px;font-size:13px}
+.tcard .tdh{font-size:25px;margin:0 0 26px}
+.tcard .tdh,.tcard>.td:first-child{margin-top:auto;padding-top:28px}
+.tcard .pick{gap:14px;min-height:170px!important;max-height:270px}
+.tcard .pbtn{border-radius:24px;padding:20px 8px}
+.tcard .pbtn .big{font-size:31px}
+.tcard .pbtn .small{font-size:14.5px;margin-top:10px}
+.tcard .etc{margin-top:18px;padding:18px}
+.tcard .saved{margin-top:20px}
+.tcard .thint{margin-top:auto;padding-top:30px}
+.tcard .q{margin:14px 0 10px}
+.tcard .qsub{margin:0 0 30px;line-height:1.6}
 </style>
 </head>
 <body>
@@ -1087,18 +1103,13 @@ function renderToday(){
   }
   inner += `<p class="thint">누르면 바로 저장돼요.</p>`;
   const v = document.getElementById("v-today");
-  v.innerHTML = `<div class="tcard">${inner}</div>
-    <button class="msum" id="goSheet">
-      <span><span class="lbl">${d.getMonth()+1}월 오늘까지</span><b>계 ${fmt(st.total)}시간</b></span>
-      <span class="r">작업 ${fmt(st.tong)}  주차 ${fmt(st.juCha)}  유휴 ${fmt(st.yu)}<br>${miss?`<em>미체크 ${miss}일</em>  `:""}출근표 보기 ›</span>
-    </button>`;
+  v.innerHTML = `<div class="tcard">${inner}</div>`;
   v.querySelectorAll(".pbtn").forEach(b=>b.onclick=()=>{ S.rec[k]=b.dataset.t; S.autoK=""; save(); renderToday(); toast(b.dataset.t+"시 퇴근으로 넣었어요"); });
   const c = document.getElementById("clr"); if(c) c.onclick=()=>{ delete S.rec[k]; (S.noAuto=S.noAuto||{})[k]=1; save(); renderToday(); };
   const u = document.getElementById("undoLv"); if(u) u.onclick=()=>{ delete S.rec[k]; save(); renderToday(); };
   const e = document.getElementById("etc"); if(e) e.onclick=()=>modal(dl, "오늘 쉬시거나 반차면 골라주세요.",
     [{v:"a",l:"연차",s:"하루 쉼",full:1,big:1},{v:"h",l:"반차",s:"4시간 근무"},{v:"m",l:"월차",s:"하루 쉼 · 입사 1년 전"},{v:"sp",l:"특이사항",s:"3시 퇴근 · 결근 · 조퇴 · 장기 휴무",full:1},{v:"fx",l:"요일 고정 퇴근 설정",s:"예: 월·목은 늘 5시",full:1}].map(o=>({...o,on:r===o.v})).concat(LV[r]?[{v:"del",l:LV[r]+" 지우기",del:1}]:[]),
     x=>{ if(x==="sp") return special(k, renderToday); if(x==="fx") return fixedModal(myFixed(), "내 요일 고정 퇴근", renderToday); if(x==="del") delete S.rec[k]; else S.rec[k]=x; save(); renderToday(); toast(x==="del"?"지웠어요":LV[x]+"로 넣었어요"); });
-  document.getElementById("goSheet").onclick=()=>go("sheet");
   const mb = document.getElementById("mealb"); if(mb) mb.onclick = mealSheet;
 }
 
