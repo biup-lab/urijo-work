@@ -935,10 +935,12 @@ body.wide{padding-bottom:0}
 .wx3d .wx1 b{font-size:17px}
 .wx3d .wxi{width:24px;height:24px}.wx3d .wxi svg{width:24px;height:24px}
 .wxi.sun,.wki.sun{color:#F5A623}.wxi.cloud,.wki.cloud{color:#7F95B8}.wxi.rain,.wki.rain{color:#3D7BE0}
-.wxmm{font-size:12.5px;color:var(--text);opacity:.5;white-space:nowrap;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.02em}
+.wxmm{font-size:12.5px;color:var(--text);opacity:.5;white-space:nowrap;flex:none;letter-spacing:-.02em}
+.wx3d .wx1{overflow:hidden}
 .wx3d .wx1 b{white-space:nowrap;flex:none}
 .wx3d .wxmm{margin-left:auto}
-@media (max-width:380px){.wx3d .wx1 b{font-size:15px}.wx3d .wxmm{font-size:11.5px}.wx.wx3d{padding:13px 12px}.wx3d .wx1{gap:6px}.wx3d .wxi,.wx3d .wxi svg{width:21px;height:21px}}
+.wx3d .wxgo{margin-left:4px;flex:none}
+@media (max-width:380px){.wx.wx3d{padding:13px 12px}.wx3d .wx1{gap:6px}.wx3d .wxi,.wx3d .wxi svg{width:21px;height:21px}}
 .wxgo{margin-left:auto;color:#8FA3C4;font-size:20px;line-height:1}
 .wkbox{background:linear-gradient(180deg,#5B8FD9 0%,#3D6FC2 100%);border-radius:20px;padding:6px 18px;color:#fff;box-shadow:0 8px 20px rgba(30,70,150,.25)}
 .wkw{display:flex;align-items:center;gap:12px;padding:15px 0;font-size:18px}
@@ -1236,7 +1238,7 @@ function renderToday(){
     [{v:"a",l:"연차",s:"하루 쉼",full:1,big:1},{v:"h",l:"반차",s:"4시간 근무"},{v:"m",l:"월차",s:"하루 쉼 · 입사 1년 전"},{v:"sp",l:"특이사항",s:"3시 퇴근 · 결근 · 조퇴 · 장기 휴무",full:1},{v:"fx",l:"요일 고정 퇴근 설정",s:"예: 월·목은 늘 5시",full:1}].map(o=>({...o,on:r===o.v})).concat(LV[r]?[{v:"del",l:LV[r]+" 지우기",del:1}]:[]),
     x=>{ if(x==="sp") return special(k, renderToday); if(x==="fx") return fixedModal(myFixed(), "내 요일 고정 퇴근", renderToday); if(x==="del") delete S.rec[k]; else S.rec[k]=x; save(); renderToday(); toast(x==="del"?"지웠어요":LV[x]+"로 넣었어요"); });
   const mb = document.getElementById("mealb"); if(mb) mb.onclick = mealSheet;
-  const wb = document.getElementById("wxbox"); if(wb) wb.onclick = wxWeek;
+  const wb = document.getElementById("wxbox"); if(wb){ wb.onclick = wxWeek; wxFit(); }
 }
 
 /* ===== 2. 쉬는 날 계획 ===== */
@@ -1303,8 +1305,14 @@ function wxLoad(force){
   fetch(url).then(r=>r.ok ? r.json() : Promise.reject()).then(j=>{ wxData = parseWx(j); wxErr = false;
       try{ localStorage.setItem(WXK, JSON.stringify({day:todayK(), at:Date.now(), d:wxData})); }catch(e){} })
     .catch(()=>{ wxErr = true; })
-    .finally(()=>{ wxBusy = false; const el = document.getElementById("wxbox"); if(el){ el.outerHTML = wxHTML(); const nb = document.getElementById("wxbox"); if(nb) nb.onclick = wxWeek; } });
+    .finally(()=>{ wxBusy = false; const el = document.getElementById("wxbox"); if(el){ el.outerHTML = wxHTML(); const nb = document.getElementById("wxbox"); if(nb){ nb.onclick = wxWeek; wxFit(); } } });
 }
+/* 날씨 한 줄이 넘치면 글씨를 조금씩 줄여서 한 줄에 맞춰요 (화살표·기온은 그대로) */
+function wxFit(){ const el = document.getElementById("wxbox"); if(!el) return; const row = el.querySelector(".wx1"), b = row && row.querySelector("b"), mm = row && row.querySelector(".wxmm"); if(!b) return;
+  b.style.fontSize = ""; if(mm) mm.style.fontSize = "";
+  let f = parseFloat(getComputedStyle(b).fontSize), g = mm ? parseFloat(getComputedStyle(mm).fontSize) : 0;
+  for(let i=0; i<12 && row.scrollWidth > row.clientWidth + 1 && f > 12; i++){ f -= .5; b.style.fontSize = f+"px"; if(mm && g > 10){ g -= .4; mm.style.fontSize = g+"px"; } } }
+window.addEventListener("resize", ()=>wxFit());
 const wxTone = c => c==null ? "" : c<=1 ? "sun" : c<=3 ? "cloud" : c>=51 ? "rain" : "cloud";
 /* 일주일 날씨 (누르면) */
 function wxWeek(){
@@ -1328,7 +1336,7 @@ function wxHTML(){
   const chip = w.rain>=50 ? `<span class="wxc">${WXI.umb}${w.rain}%</span>` : (w.h7!=null && w.h7<=0) ? `<span class="wxc">${WXI.cold}${r0(w.h7)}°</span>` : "";
   // 메인엔 "어제보다 몇 도" 한 줄만. 누르면 일주일 날씨.
   return `<button class="wx wx3d ${dir}" id="wxbox"${w.demo?` title="${T.demo}"`:""}>
-    <div class="wx1"><span class="wxi ${wxTone(w.code)}">${ic}</span><b>${main}</b><span class="wxmm">${T.min} ${r0(w.min)}° ${T.max} ${r0(w.max)}°</span>${w.demo?`<em class="wxe">${S.lang && S.lang!=="ko" ? "demo" : "예시"}</em>`:""}</div></button>`;
+    <div class="wx1"><span class="wxi ${wxTone(w.code)}">${ic}</span><b>${main}</b><span class="wxmm">${T.min} ${r0(w.min)}° ${T.max} ${r0(w.max)}°</span>${w.demo?`<em class="wxe">${S.lang && S.lang!=="ko" ? "demo" : "예시"}</em>`:`<span class="wxgo">›</span>`}</div></button>`;
 }
 
 let lastFill = null;
