@@ -927,6 +927,27 @@ body.wide{padding-bottom:0}
 .wkr span{flex:none;width:34px;color:var(--sub);font-size:13px;padding-top:2px}
 .wkr p{margin:0;color:var(--text);word-break:keep-all}
 .wkr.q p{color:#B0B8C1}
+/* 날씨: 입체 박스 한 줄 */
+.wx.wx3d{display:block;width:100%;font:inherit;cursor:pointer;border:0;border-radius:18px;padding:14px 16px;
+  background:linear-gradient(160deg,#F4F8FF 0%,#E3ECFB 100%);
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 -2px 0 rgba(30,70,150,.06) inset,0 6px 16px rgba(30,70,150,.14),0 1px 3px rgba(30,70,150,.10)}
+.wx.wx3d:active{transform:translateY(1px);box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 3px 8px rgba(30,70,150,.12)}
+.wx3d .wx1 b{font-size:17px}
+.wx3d .wxi{width:24px;height:24px}.wx3d .wxi svg{width:24px;height:24px}
+.wxi.sun,.wki.sun{color:#F5A623}.wxi.cloud,.wki.cloud{color:#7F95B8}.wxi.rain,.wki.rain{color:#3D7BE0}
+.wxgo{margin-left:auto;color:#8FA3C4;font-size:20px;line-height:1}
+.wkbox{background:linear-gradient(180deg,#5B8FD9 0%,#3D6FC2 100%);border-radius:20px;padding:6px 18px;color:#fff;box-shadow:0 8px 20px rgba(30,70,150,.25)}
+.wkw{display:flex;align-items:center;gap:12px;padding:15px 0;font-size:18px}
+.wkw+.wkw{border-top:1px solid rgba(255,255,255,.14)}
+.wkw.past{opacity:.6}
+.wkw.on .wkl{color:#FFE38A}
+.wkl{flex:1;font-weight:700}
+.wkr2{display:inline-flex;align-items:center;gap:3px;font-size:13px;opacity:.85;min-width:56px;justify-content:flex-end}
+.wkr2 svg{width:14px;height:14px}
+.wki{width:30px;height:30px;display:grid;place-items:center;background:rgba(255,255,255,.92);border-radius:50%}
+.wki svg{width:20px;height:20px}
+.wkt{display:flex;gap:10px;min-width:92px;justify-content:flex-end}
+.wkt b{font-weight:700}.wkt i{font-style:normal;opacity:.75}
 .admst{margin:10px 16px 0;font-size:12.5px;color:var(--sub);text-align:right}
 /* 쉬는 날 계획: 우리 조 쉬는 날 */
 .crewoff{margin-top:28px;background:var(--card);border-radius:20px;padding:20px 18px 8px}
@@ -1029,7 +1050,7 @@ const josa = w => ((w.charCodeAt(w.length-1)-0xAC00)%28 ? "이에요" : "예요"
 const TEST_FLAG = false;
 const TEST = TEST_FLAG && !/github\.io$/i.test(location.hostname);
 const KEY = TEST ? "teamwork2-test" : "teamwork2-v1";
-const APP_VER = "1111-5";   // 화면 맨 아래에 작게 보여요. 폰마다 새 버전인지 확인용
+const APP_VER = "1111-6";   // 화면 맨 아래에 작게 보여요. 폰마다 새 버전인지 확인용
 let VIEWAS = null;   // 관리자가 다른 사람 화면을 "보기 전용"으로 볼 때 (이때는 아무것도 저장·전송 안 해요)
 
 let S = {name:"", rec:{}, wk:{}, chk:{}};
@@ -1211,6 +1232,7 @@ function renderToday(){
     [{v:"a",l:"연차",s:"하루 쉼",full:1,big:1},{v:"h",l:"반차",s:"4시간 근무"},{v:"m",l:"월차",s:"하루 쉼 · 입사 1년 전"},{v:"sp",l:"특이사항",s:"3시 퇴근 · 결근 · 조퇴 · 장기 휴무",full:1},{v:"fx",l:"요일 고정 퇴근 설정",s:"예: 월·목은 늘 5시",full:1}].map(o=>({...o,on:r===o.v})).concat(LV[r]?[{v:"del",l:LV[r]+" 지우기",del:1}]:[]),
     x=>{ if(x==="sp") return special(k, renderToday); if(x==="fx") return fixedModal(myFixed(), "내 요일 고정 퇴근", renderToday); if(x==="del") delete S.rec[k]; else S.rec[k]=x; save(); renderToday(); toast(x==="del"?"지웠어요":LV[x]+"로 넣었어요"); });
   const mb = document.getElementById("mealb"); if(mb) mb.onclick = mealSheet;
+  const wb = document.getElementById("wxbox"); if(wb) wb.onclick = wxWeek;
 }
 
 /* ===== 2. 쉬는 날 계획 ===== */
@@ -1258,24 +1280,38 @@ const WXC = c => c==null ? [WXI.cloud,{ko:"",en:"",ru:"",uz:"",si:""}] : c===0 ?
   : c<=77 ? [WXI.snow,{ko:"눈",en:"Snow",ru:"Снег",uz:"Qor",si:"හිම"}]
   : c<=82 ? [WXI.rain,{ko:"소나기",en:"Showers",ru:"Ливень",uz:"Jala",si:"වැසි"}]
   : [WXI.storm,{ko:"뇌우",en:"Thunderstorm",ru:"Гроза",uz:"Momaqaldiroq",si:"ගිගුරුම්"}];
-const WX_DEMO = {min:4,max:15,code:1,ymin:2,ymax:16,h7:5,h17:13,h18:11,y7:8,y17:14,y18:12,rain:10,demo:true};
+const WX_DEMO = {min:4,max:15,code:1,ymin:2,ymax:16,h7:5,h17:13,h18:11,y7:8,y17:14,y18:12,rain:10,demo:true,
+  week:[[-1,16,2,1,0],[0,15,4,1,10],[1,18,7,3,20],[2,19,6,2,20],[3,16,10,61,70],[4,18,13,61,60],[5,15,11,2,20],[6,16,11,3,30]].map(([o,max,min,code,rain])=>{ const t = new Date(); return {d:ymd(mk(t.getFullYear(), t.getMonth(), t.getDate()+o)), max, min, code, rain}; })};
 function parseWx(j){
   const H = j.hourly, D = j.daily, t = todayK(), td = new Date(t+"T00:00:00"), y = ymd(mk(td.getFullYear(), td.getMonth(), td.getDate()-1));
   const at = (day,h)=>{ const i = H.time.indexOf(`${day}T${String(h).padStart(2,"0")}:00`); return i<0 ? null : H.temperature_2m[i]; };
   let rain = 0; for(let h=7;h<=18;h++){ const i = H.time.indexOf(`${t}T${String(h).padStart(2,"0")}:00`); if(i>=0 && H.precipitation_probability) rain = Math.max(rain, H.precipitation_probability[i]||0); }
   const di = D.time.indexOf(t), dy = D.time.indexOf(y);
   return {min:D.temperature_2m_min[di], max:D.temperature_2m_max[di], code:D.weather_code[di], ymin:dy>=0?D.temperature_2m_min[dy]:null, ymax:dy>=0?D.temperature_2m_max[dy]:null,
-    h7:at(t,7), h17:at(t,17), h18:at(t,18), y7:at(y,7), y17:at(y,17), y18:at(y,18), rain};
+    h7:at(t,7), h17:at(t,17), h18:at(t,18), y7:at(y,7), y17:at(y,17), y18:at(y,18), rain,
+    week:D.time.map((d,i)=>({d, max:D.temperature_2m_max[i], min:D.temperature_2m_min[i], code:D.weather_code[i], rain:D.precipitation_probability_max?D.precipitation_probability_max[i]:null}))};
 }
 function wxLoad(force){
   if(wxBusy) return; let c = null; try{ c = JSON.parse(localStorage.getItem(WXK)||"null"); }catch(e){}
-  if(c && c.day===todayK()){ wxData = c.d; if(!force && Date.now()-c.at < 3600e3) return; }
+  if(c && c.day===todayK()){ wxData = c.d; if(!force && Date.now()-c.at < 3600e3 && c.d && c.d.week) return; }
   wxBusy = true;
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${WX.lat}&longitude=${WX.lon}&hourly=temperature_2m,precipitation_probability&daily=temperature_2m_max,temperature_2m_min,weather_code&past_days=1&forecast_days=1&timezone=Asia%2FSeoul`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${WX.lat}&longitude=${WX.lon}&hourly=temperature_2m,precipitation_probability&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max&past_days=1&forecast_days=7&timezone=Asia%2FSeoul`;
   fetch(url).then(r=>r.ok ? r.json() : Promise.reject()).then(j=>{ wxData = parseWx(j); wxErr = false;
       try{ localStorage.setItem(WXK, JSON.stringify({day:todayK(), at:Date.now(), d:wxData})); }catch(e){} })
     .catch(()=>{ wxErr = true; })
-    .finally(()=>{ wxBusy = false; const el = document.getElementById("wxbox"); if(el) el.outerHTML = wxHTML(); });
+    .finally(()=>{ wxBusy = false; const el = document.getElementById("wxbox"); if(el){ el.outerHTML = wxHTML(); const nb = document.getElementById("wxbox"); if(nb) nb.onclick = wxWeek; } });
+}
+const wxTone = c => c==null ? "" : c<=1 ? "sun" : c<=3 ? "cloud" : c>=51 ? "rain" : "cloud";
+/* 일주일 날씨 (누르면) */
+function wxWeek(){
+  const T = WXT[S.lang]||WXT.ko, w = wxData || WX_DEMO, L = (w.week||[]), tk = todayK(), sh = document.getElementById("sheet");
+  if(!L.length){ toast("날씨를 불러오는 중이에요"); wxLoad(true); return; }
+  const r0 = n => n==null ? "–" : Math.round(n);
+  const rows = L.map(x=>{ const d = new Date(x.d+"T00:00:00"), past = x.d<tk, lb = x.d===tk ? "오늘" : past ? "어제" : DOW[d.getDay()];
+    const [ic] = WXC(x.code);
+    return `<div class="wkw ${past?"past":""} ${x.d===tk?"on":""}"><b class="wkl">${lb}</b>${past?"":`<span class="wkr2">${WXI.umb}${x.rain==null?"–":x.rain}%</span><span class="wki ${wxTone(x.code)}">${ic}</span>`}<span class="wkt"><b>${r0(x.max)}°</b><i>${r0(x.min)}°</i></span></div>`; }).join("");
+  sh.innerHTML = `<h3>일주일 날씨</h3><p>${(WX.place[S.lang]||WX.place.ko)} · 최고 / 최저</p><div class="wkbox">${rows}</div><button class="close" id="cls">닫기</button>`;
+  document.getElementById("cls").onclick = closeDim; openDim();
 }
 function wxHTML(){
   const T = WXT[S.lang]||WXT.ko, w = wxData || (wxErr ? WX_DEMO : null);
@@ -1286,9 +1322,9 @@ function wxHTML(){
   if(t!=null && y!=null){ const v = Math.round(t-y); main = Math.abs(v)<1 ? T.same : v>0 ? T.warm(v) : T.cold(-v); dir = v>=1 ? "up" : v<=-1 ? "down" : ""; }
   const ho = oh===18 ? w.h18 : w.h17;
   const chip = w.rain>=50 ? `<span class="wxc">${WXI.umb}${w.rain}%</span>` : (w.h7!=null && w.h7<=0) ? `<span class="wxc">${WXI.cold}${r0(w.h7)}°</span>` : "";
-  return `<div class="wx ${dir}" id="wxbox"${w.demo?` title="${T.demo}"`:""}>
-    <div class="wx1"><span class="wxi">${ic}</span><span class="wxn">${nm[S.lang]||nm.ko}</span><b>${main}</b>${chip||(w.demo?`<em class="wxe">${S.lang && S.lang!=="ko" ? "demo" : "예시"}</em>`:"")}</div>
-    <div class="wx2"><span>${T.min} ${r0(w.min)}° / ${T.max} ${r0(w.max)}°</span><span class="wxp">${T.in} ${T.h(7)} <b>${r0(w.h7)}°</b><i></i>${T.out} ${T.h(oh)} <b>${r0(ho)}°</b></span></div></div>`;
+  // 메인엔 "어제보다 몇 도" 한 줄만. 누르면 일주일 날씨.
+  return `<button class="wx wx3d ${dir}" id="wxbox"${w.demo?` title="${T.demo}"`:""}>
+    <div class="wx1"><span class="wxi ${wxTone(w.code)}">${ic}</span><b>${main}</b>${w.demo?`<em class="wxe">${S.lang && S.lang!=="ko" ? "demo" : "예시"}</em>`:`<span class="wxgo">›</span>`}</div></button>`;
 }
 
 let lastFill = null;
@@ -2023,6 +2059,11 @@ const I18N = {
 "체크 지우기":["Clear","Удалить отметку","Belgini o'chirish","සලකුණ මකන්න"],
 "오늘 점심":["Today's lunch","Обед сегодня","Bugungi tushlik","අද දිවා ආහාරය"],
 "오늘 저녁":["Today's dinner","Ужин сегодня","Bugungi kechki ovqat","අද රාත්‍රී ආහාරය"],
+"오늘·내일 식단":["Today & tomorrow menu","Меню на сегодня и завтра","Bugun va ertaga menyu","අද සහ හෙට කෑම"],
+"오늘·내일 식단이 아직 없어요.":["No menu for today or tomorrow yet.","Меню пока нет.","Menyu hali yoʻq.","තවම කෑම ලැයිස්තුවක් නැත."],
+"일주일 날씨":["7-day weather","Погода на неделю","Haftalik ob-havo","දින 7 කාලගුණය"],
+"내일":["Tomorrow","Завтра","Ertaga","හෙට"],
+"어제":["Yesterday","Вчера","Kecha","ඊයේ"],
 "이번 주 식단":["This week's menu","Меню на неделю","Shu hafta menyusi","මෙම සතියේ මෙනුව"],
 "점심":["Lunch","Обед","Tushlik","දිවා"],
 "저녁":["Dinner","Ужин","Kechki","රාත්‍රී"],
@@ -2938,11 +2979,11 @@ function mealHTML(){
   return `<button class="meal1" id="mealb">${L.map(([lb,tx])=>`<span class="ml"><span>${lb}</span>${short(tx).map(esc).join(", ")}</span>`).join("")}</button>`;
 }
 function mealSheet(){
-  const sh = document.getElementById("sheet"), t = new Date(), mon = mk(t.getFullYear(), t.getMonth(), t.getDate()-((t.getDay()+6)%7));
-  const rows = []; for(let i=0;i<7;i++){ const d = mk(mon.getFullYear(), mon.getMonth(), mon.getDate()+i), m = mealOf(d); if(!m) continue;
+  const sh = document.getElementById("sheet"), t = new Date();
+  const rows = []; for(let i=0;i<2;i++){ const d = mk(t.getFullYear(), t.getMonth(), t.getDate()+i), m = mealOf(d); if(!m) continue;   // 오늘·내일만
     const blk = (lb, tx)=>tx ? `<div class="mcard"><h4>${lb}</h4><ol>${mealItems(tx).map((x,i)=>`<li><span>${i+1}</span>${esc(x)}</li>`).join("")}</ol></div>` : "";
-    rows.push(`<section class="mday2 ${ymd(d)===todayK()?"on":""}"><h3 class="mdh"><i></i>${d.getMonth()+1}월 ${d.getDate()}일 ${DOW[d.getDay()]}요일${ymd(d)===todayK()?'<span>오늘</span>':""}</h3><div class="mcards">${blk(m.p||m.d?"한식":"점심", m.l)}${blk("일품", m.p)}${blk("저녁", m.d)}</div></section>`); }
-  sh.innerHTML = `<h3>이번 주 식단</h3><p>${t.getMonth()+1}월 ${mon.getDate()}일 주</p><div class="meall big">${rows.join("")||`<div class="adempty">이번 주 식단이 아직 없어요.</div>`}</div><button class="close" id="cls">닫기</button>`;
+    rows.push(`<section class="mday2 ${ymd(d)===todayK()?"on":""}"><h3 class="mdh"><i></i>${d.getMonth()+1}월 ${d.getDate()}일 ${DOW[d.getDay()]}요일<span>${i===0?"오늘":"내일"}</span></h3><div class="mcards">${blk(m.p||m.d?"한식":"점심", m.l)}${blk("일품", m.p)}${blk("저녁", m.d)}</div></section>`); }
+  sh.innerHTML = `<h3>오늘·내일 식단</h3><div class="meall big">${rows.join("")||`<div class="adempty">오늘·내일 식단이 아직 없어요.</div>`}</div><button class="close" id="cls">닫기</button>`;
   document.getElementById("cls").onclick = closeDim; openDim();
   const ml = sh.querySelector(".meall"), on = sh.querySelector(".mday2.on"); if(ml && on) ml.scrollTop = on.getBoundingClientRect().top - ml.getBoundingClientRect().top + ml.scrollTop;   // 오늘 메뉴가 맨 위에
 }
