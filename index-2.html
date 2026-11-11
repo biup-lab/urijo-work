@@ -928,13 +928,17 @@ body.wide{padding-bottom:0}
 .wkr p{margin:0;color:var(--text);word-break:keep-all}
 .wkr.q p{color:#B0B8C1}
 /* 날씨: 입체 박스 한 줄 */
-.wx.wx3d{display:block;width:100%;font:inherit;cursor:pointer;border:0;border-radius:18px;padding:14px 16px;
+.wx.wx3d{display:block;width:100%;font:inherit;cursor:pointer;border:0;border-radius:18px;padding:14px 14px;
   background:linear-gradient(160deg,#F4F8FF 0%,#E3ECFB 100%);
   box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 -2px 0 rgba(30,70,150,.06) inset,0 6px 16px rgba(30,70,150,.14),0 1px 3px rgba(30,70,150,.10)}
 .wx.wx3d:active{transform:translateY(1px);box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 3px 8px rgba(30,70,150,.12)}
 .wx3d .wx1 b{font-size:17px}
 .wx3d .wxi{width:24px;height:24px}.wx3d .wxi svg{width:24px;height:24px}
 .wxi.sun,.wki.sun{color:#F5A623}.wxi.cloud,.wki.cloud{color:#7F95B8}.wxi.rain,.wki.rain{color:#3D7BE0}
+.wxmm{font-size:12.5px;color:var(--text);opacity:.5;white-space:nowrap;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.02em}
+.wx3d .wx1 b{white-space:nowrap;flex:none}
+.wx3d .wxmm{margin-left:auto}
+@media (max-width:380px){.wx3d .wx1 b{font-size:15px}.wx3d .wxmm{font-size:11.5px}.wx.wx3d{padding:13px 12px}.wx3d .wx1{gap:6px}.wx3d .wxi,.wx3d .wxi svg{width:21px;height:21px}}
 .wxgo{margin-left:auto;color:#8FA3C4;font-size:20px;line-height:1}
 .wkbox{background:linear-gradient(180deg,#5B8FD9 0%,#3D6FC2 100%);border-radius:20px;padding:6px 18px;color:#fff;box-shadow:0 8px 20px rgba(30,70,150,.25)}
 .wkw{display:flex;align-items:center;gap:12px;padding:15px 0;font-size:18px}
@@ -1324,7 +1328,7 @@ function wxHTML(){
   const chip = w.rain>=50 ? `<span class="wxc">${WXI.umb}${w.rain}%</span>` : (w.h7!=null && w.h7<=0) ? `<span class="wxc">${WXI.cold}${r0(w.h7)}°</span>` : "";
   // 메인엔 "어제보다 몇 도" 한 줄만. 누르면 일주일 날씨.
   return `<button class="wx wx3d ${dir}" id="wxbox"${w.demo?` title="${T.demo}"`:""}>
-    <div class="wx1"><span class="wxi ${wxTone(w.code)}">${ic}</span><b>${main}</b>${w.demo?`<em class="wxe">${S.lang && S.lang!=="ko" ? "demo" : "예시"}</em>`:`<span class="wxgo">›</span>`}</div></button>`;
+    <div class="wx1"><span class="wxi ${wxTone(w.code)}">${ic}</span><b>${main}</b><span class="wxmm">${T.min} ${r0(w.min)}° ${T.max} ${r0(w.max)}°</span>${w.demo?`<em class="wxe">${S.lang && S.lang!=="ko" ? "demo" : "예시"}</em>`:""}</div></button>`;
 }
 
 let lastFill = null;
