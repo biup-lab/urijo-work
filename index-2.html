@@ -916,6 +916,7 @@ body.wide{padding-bottom:0}
 .tcard .tdh{margin:auto 0 16px}
 .tcard .thint{padding-top:38px}
 .meall{max-height:62vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.linfo div span{flex:none;margin-right:14px}.linfo div b{text-align:right;word-break:keep-all}
 .wklist{margin-top:14px;background:var(--card);border-radius:20px;padding:16px 16px 6px}
 .wklist h2{margin:0 0 6px;font-size:16px;font-weight:700}
 .wkd{padding:12px 0;border-top:1px solid var(--line)}
@@ -1028,7 +1029,7 @@ const josa = w => ((w.charCodeAt(w.length-1)-0xAC00)%28 ? "이에요" : "예요"
 const TEST_FLAG = false;
 const TEST = TEST_FLAG && !/github\.io$/i.test(location.hostname);
 const KEY = TEST ? "teamwork2-test" : "teamwork2-v1";
-const APP_VER = "1111-4";   // 화면 맨 아래에 작게 보여요. 폰마다 새 버전인지 확인용
+const APP_VER = "1111-5";   // 화면 맨 아래에 작게 보여요. 폰마다 새 버전인지 확인용
 let VIEWAS = null;   // 관리자가 다른 사람 화면을 "보기 전용"으로 볼 때 (이때는 아무것도 저장·전송 안 해요)
 
 let S = {name:"", rec:{}, wk:{}, chk:{}};
@@ -1667,14 +1668,14 @@ function teamMonth(){
   const lv = teamLeaves(y,m), by = {}; lv.forEach(x=>(by[x.k]=by[x.k]||[]).push(x));
   let cells = ""; for(let i=0;i<off;i++) cells += "<div></div>";
   for(let i=1;i<=dim;i++){ const d = mk(y,m,i), k = ymd(d), dw = d.getDay(), h = HOL[k], n = (by[k]||[]).length;
-    const wkn = isRest(d,k) ? Object.values(wkOf(k)).filter(v=>v==="w").length : 0;
-    cells += `<button class="cell ${dw===6&&!h?"sat":""} ${(dw===0||h)?"red":""} ${k===t?"today":""} ${n?"lv":""}" data-day="${k}"><span class="n">${i}</span>${n?`<span class="chip c-m">${n}명</span>`:wkn?`<span class="chip c-w">출근 ${wkn}</span>`:""}</button>`; }
+    const wko = isRest(d,k) ? Object.values(wkOf(k)) : [], wkn = wko.filter(v=>v==="w").length, wkr = wko.filter(v=>v==="o").length;
+    cells += `<button class="cell ${dw===6&&!h?"sat":""} ${(dw===0||h)?"red":""} ${k===t?"today":""} ${n?"lv":""}" data-day="${k}"><span class="n">${i}</span>${n?`<span class="chip c-m">${n}명</span>`:""}${wkn?`<span class="chip c-w">출근 ${wkn}</span>`:""}${wkr?`<span class="chip c-o">쉼 ${wkr}</span>`:""}</button>`; }
   const days = Object.keys(by).sort().map(k=>{ const d = new Date(k+"T00:00:00");
     return `<div class="mday"><div class="mdl">${d.getDate()}일 <span>${DOW[d.getDay()]}</span></div><div class="mdn">${by[k].map(x=>{ const pend = !x.by && !x.ok && x.at, wait = x.by && !x.cok; return `<button class="mchip ${pend?"pend":""}" data-k="${k}" data-n="${esc(x.n)}">${esc(x.n)}${pend?"<i>확인 전</i>":wait?"<i class=\"w\">본인 확인 전</i>":x.at?"<i class=\"ok\">✓</i>":""}</button>`; }).join("")}</div></div>`; }).join("");
   return `<div class="mnav"><button id="tmp" aria-label="이전 달">‹</button><b>${y}년 ${m+1}월 쉬는 날</b><button id="tmn" aria-label="다음 달">›</button></div>
     <div class="cal"><div class="wk"><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div><div>일</div></div><div class="grid">${cells}</div></div>
-    <div class="mlist">${days || '<div class="empty">이번 달엔 쉬는 사람이 없어요.</div>'}</div>
     ${wkList(y,m)}
+    <div class="mlist">${days || '<div class="empty">이번 달엔 쉬는 사람이 없어요.</div>'}</div>
     <p class="subl">날짜를 누르면 조원별로 쉬는 날을 정할 수 있어요. 정한 내용은 그 조원 화면에도 같이 들어가요. 아래 이름을 누르면 종류와 사유가 보여요.</p>`;
 }
 /* 주말·공휴일 출근 현황 (조장 화면) */
@@ -1734,8 +1735,14 @@ function leadSet(k, n, t, reason){
 }
 function dayInfo(k){
   const {y,m} = tmon, arr = teamLeaves(y,m).filter(o=>o.k===k), d = new Date(k+"T00:00:00");
-  if(!arr.length){ toast("이날은 쉬는 사람이 없어요"); return; }
   const sh = document.getElementById("sheet");
+  if(isRest(d,k)){ const o = wkOf(k), all = S.team.crew.map(p=>p.n); if(S.name && !all.includes(S.name)) all.unshift(S.name);
+    const w = all.filter(n=>o[n]==="w"), r = all.filter(n=>o[n]==="o"), u = all.filter(n=>!o[n]);
+    if(!w.length && !r.length && !arr.length){ toast("이날은 아직 아무도 체크하지 않았어요"); return; }
+    const row = (lb, L, q)=>`<div><span>${lb} ${L.length}명</span><b${q?' style="color:var(--sub);font-weight:500"':""}>${L.map(esc).join(", ")||"없음"}</b></div>`;
+    sh.innerHTML = `<h3>${md(d)} ${HOL[k]?HOL[k][0]:DOW[d.getDay()]+"요일"}</h3><p>주말·공휴일 출근 현황이에요.</p><div class="linfo">${row("출근", w)}${row("쉼", r)}${u.length?row("미정", u, 1):""}</div><button class="close" id="cls">닫기</button>`;
+    document.getElementById("cls").onclick = closeDim; openDim(); return; }
+  if(!arr.length){ toast("이날은 쉬는 사람이 없어요"); return; }
   sh.innerHTML = `<h3>${md(d)} ${DOW[d.getDay()]}요일</h3><p>이날 쉬는 사람 ${arr.length}명</p><div class="linfo">${arr.map(x=>`<div><span>${esc(x.n)}</span><b>${LBL[x.t]||x.t}${x.reason?" · "+esc(x.reason):""}</b></div>`).join("")}</div><button class="close" id="cls">닫기</button>`;
   document.getElementById("cls").onclick = closeDim; openDim();
 }
