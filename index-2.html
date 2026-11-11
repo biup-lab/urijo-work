@@ -916,9 +916,6 @@ body.wide{padding-bottom:0}
 .tcard .tdh{margin:auto 0 16px}
 .tcard .thint{padding-top:38px}
 .meall{max-height:62vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.vab{position:fixed;left:50%;transform:translateX(-50%);top:calc(8px + env(safe-area-inset-top,0px));z-index:60;display:flex;align-items:center;gap:12px;background:#FFF4E5;color:#7A4B00;border-radius:14px;padding:8px 8px 8px 14px;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.12);white-space:nowrap}
-.vab button{border:0;background:#7A4B00;color:#fff;border-radius:10px;padding:7px 11px;font-size:13px;font-weight:700}
-body.viewas .top{padding-top:56px}
 .wklist{margin-top:14px;background:var(--card);border-radius:20px;padding:16px 16px 6px}
 .wklist h2{margin:0 0 6px;font-size:16px;font-weight:700}
 .wkd{padding:12px 0;border-top:1px solid var(--line)}
@@ -1031,7 +1028,7 @@ const josa = w => ((w.charCodeAt(w.length-1)-0xAC00)%28 ? "이에요" : "예요"
 const TEST_FLAG = false;
 const TEST = TEST_FLAG && !/github\.io$/i.test(location.hostname);
 const KEY = TEST ? "teamwork2-test" : "teamwork2-v1";
-const APP_VER = "1111-2";   // 화면 맨 아래에 작게 보여요. 폰마다 새 버전인지 확인용
+const APP_VER = "1111-3";   // 화면 맨 아래에 작게 보여요. 폰마다 새 버전인지 확인용
 let VIEWAS = null;   // 관리자가 다른 사람 화면을 "보기 전용"으로 볼 때 (이때는 아무것도 저장·전송 안 해요)
 
 let S = {name:"", rec:{}, wk:{}, chk:{}};
@@ -2142,6 +2139,7 @@ let adminOn = false, ataps = 0, atT, admT = null;
    왼쪽 글자를 누르면 폰이 검색 등을 띄워서 옮겼어요. 조장 화면은 오른쪽에 버튼이 있어서 이름과 버튼 사이 빈 곳이에요. */
 document.querySelector("header.top").onclick = ev=>{
   if(ev.target.closest("button,a,input,#teamName,#meName")) return;
+  if(VIEWAS && ataps>=4) return vaBack();   // 다른 사람 화면을 보는 중이면 관리자로 돌아가요
   ataps++; clearTimeout(atT); atT = setTimeout(()=>ataps = 0, 1500);
   if(ataps>=5){ ataps = 0; admT = null; admTab = "home"; if(S.admDev) adminOn = true; adminOn ? go("admin") : adminLogin(); }
 };
@@ -2542,23 +2540,21 @@ async function viewAs(T, name){
   const tk = todayK(), leaves = {};
   rows.forEach(r=>{ if(!LVT.includes(r.code)) return; const by = r.by && r.by!==r.name ? r.by : null;
     (leaves[r.date] = leaves[r.date]||[]).push({n:r.name, t:r.code, reason:r.reason||"", by, at:r.at, ok:by ? true : !!r.ok, cok:!!by}); });
-  const crew = T.crew.map(p=>{ const r = rows.find(x=>x.date===tk && x.name===p.n); return {n:p.n, r:r?r.code:"", role:p.role, sub:p.sub, nat:p.nat}; });
+  const crew = T.crew.map(p=>{ const r = rows.find(x=>x.date===tk && x.name===p.n); const o = {n:p.n, r:r?r.code:""}; if(r && r.reason) o.reason = r.reason;
+    ["role","sub","nat","note","fixed"].forEach(k=>{ if(p[k]) o[k] = p[k]; }); return o; });
   if(!crew.some(p=>p.n===name)) crew.push({n:name, r:""});
   VIEWAS = {n:name, team:T.name};
   const rec = {}, memo = {}; rows.filter(r=>r.name===name).forEach(r=>{ if(r.code) rec[r.date] = r.code; if(r.reason) memo[r.date] = {reason:r.reason}; });
-  S.co.teams.push({id:"viewas", tid:T.tid, name:T.name, ban:T.ban||"", conf:null, leaves, crew, notes:[]});
+  const wkp = {}; rows.forEach(r=>{ if(r.code==="w" || r.code==="o") (wkp[r.date] = wkp[r.date]||{})[r.name] = r.code; });
+  S.co.teams.push({id:"viewas", tid:T.tid, name:T.name, ban:T.ban||"", conf:null, leaves, crew, notes:[], wkp});
   Object.assign(S, {myTeam:"viewas", name, rec, memo, noAuto:{}, autoK:"", byLead:{}, shq:{}, okq:{}});
   adminOn = false; closeDim(); history.replaceState(null, "", location.pathname);
-  const bar = document.createElement("div"); bar.className = "vab";
-  bar.innerHTML = `<span><b>${esc(name)}</b>님 화면 · 보기 전용</span><button>관리자로 돌아가기</button>`;
-  bar.querySelector("button").onclick = ()=>{ location.href = location.pathname+"#admin"; location.reload(); };
-  document.body.appendChild(bar); document.body.classList.add("viewas");
+  // 그 사람 폰과 똑같이 보여요. 돌아가는 버튼만 맨 아래 한 줄에 작게. (여기서 눌러도 저장·전송은 안 돼요)
+  const back = document.createElement("button"); back.className = "langf"; back.id = "vaBack"; back.textContent = "관리자로 돌아가기";
+  back.onclick = vaBack; document.querySelector("footer.credit").appendChild(back);
   cat = "me"; applyRole(); go("today");
 }
-/* 보기 전용일 때: 화면 이동·달 넘기기·식단 보기만 되고, 나머지 버튼은 막아요 */
-document.addEventListener("click", e=>{ if(!VIEWAS) return; const el = e.target.closest("button,input,textarea,select,.cell"); if(!el) return;
-  if(el.closest("#navMe,#navTeam,.vab,.mnav,#topRight,#mealb,#cls,.close,#langb")) return;
-  e.preventDefault(); e.stopPropagation(); toast("보기 전용이에요"); }, true);
+function vaBack(){ location.href = location.pathname+"#admin"; location.reload(); }
 function closeAdmin(){ if(location.hash==="#admin") history.replaceState(null, "", location.pathname+location.search); applyRole(); go(cat==="team"?"team":"today"); }
 function adminSettings(){
   const sh = document.getElementById("sheet");
