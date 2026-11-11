@@ -919,6 +919,16 @@ body.wide{padding-bottom:0}
 .vab{position:fixed;left:50%;transform:translateX(-50%);top:calc(8px + env(safe-area-inset-top,0px));z-index:60;display:flex;align-items:center;gap:12px;background:#FFF4E5;color:#7A4B00;border-radius:14px;padding:8px 8px 8px 14px;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.12);white-space:nowrap}
 .vab button{border:0;background:#7A4B00;color:#fff;border-radius:10px;padding:7px 11px;font-size:13px;font-weight:700}
 body.viewas .top{padding-top:56px}
+.wklist{margin-top:14px;background:var(--card);border-radius:20px;padding:16px 16px 6px}
+.wklist h2{margin:0 0 6px;font-size:16px;font-weight:700}
+.wkd{padding:12px 0;border-top:1px solid var(--line)}
+.wklist h2+.wkd{border-top:0}
+.wkh{font-size:15px;font-weight:600;margin-bottom:6px}
+.wkh b{color:var(--discovery);margin-left:6px}
+.wkr{display:flex;gap:10px;font-size:15px;line-height:1.6}
+.wkr span{flex:none;width:34px;color:var(--sub);font-size:13px;padding-top:2px}
+.wkr p{margin:0;color:var(--text);word-break:keep-all}
+.wkr.q p{color:#B0B8C1}
 .admst{margin:10px 16px 0;font-size:12.5px;color:var(--sub);text-align:right}
 /* 쉬는 날 계획: 우리 조 쉬는 날 */
 .crewoff{margin-top:28px;background:var(--card);border-radius:20px;padding:20px 18px 8px}
@@ -973,7 +983,7 @@ body.viewas .top{padding-top:56px}
   <section id="v-leave" hidden></section>
   <section id="v-sheet" hidden></section>
   <section id="v-admin" hidden></section>
-  <footer class="credit"><div class="shst" id="shst"></div><button class="langf" id="langb"></button><div>제작 안두현</div></footer>
+  <footer class="credit"><div class="shst" id="shst"></div><button class="langf" id="langb"></button><div>제작 안두현 <span id="appv" style="opacity:.6"></span></div></footer>
 </main>
 
 <nav class="tabs" id="navMe" aria-label="내 근무 화면 이동">
@@ -1021,6 +1031,7 @@ const josa = w => ((w.charCodeAt(w.length-1)-0xAC00)%28 ? "이에요" : "예요"
 const TEST_FLAG = false;
 const TEST = TEST_FLAG && !/github\.io$/i.test(location.hostname);
 const KEY = TEST ? "teamwork2-test" : "teamwork2-v1";
+const APP_VER = "1111-2";   // 화면 맨 아래에 작게 보여요. 폰마다 새 버전인지 확인용
 let VIEWAS = null;   // 관리자가 다른 사람 화면을 "보기 전용"으로 볼 때 (이때는 아무것도 저장·전송 안 해요)
 
 let S = {name:"", rec:{}, wk:{}, chk:{}};
@@ -1659,13 +1670,26 @@ function teamMonth(){
   const lv = teamLeaves(y,m), by = {}; lv.forEach(x=>(by[x.k]=by[x.k]||[]).push(x));
   let cells = ""; for(let i=0;i<off;i++) cells += "<div></div>";
   for(let i=1;i<=dim;i++){ const d = mk(y,m,i), k = ymd(d), dw = d.getDay(), h = HOL[k], n = (by[k]||[]).length;
-    cells += `<button class="cell ${dw===6&&!h?"sat":""} ${(dw===0||h)?"red":""} ${k===t?"today":""} ${n?"lv":""}" data-day="${k}"><span class="n">${i}</span>${n?`<span class="chip c-m">${n}명</span>`:""}</button>`; }
+    const wkn = isRest(d,k) ? Object.values(wkOf(k)).filter(v=>v==="w").length : 0;
+    cells += `<button class="cell ${dw===6&&!h?"sat":""} ${(dw===0||h)?"red":""} ${k===t?"today":""} ${n?"lv":""}" data-day="${k}"><span class="n">${i}</span>${n?`<span class="chip c-m">${n}명</span>`:wkn?`<span class="chip c-w">출근 ${wkn}</span>`:""}</button>`; }
   const days = Object.keys(by).sort().map(k=>{ const d = new Date(k+"T00:00:00");
     return `<div class="mday"><div class="mdl">${d.getDate()}일 <span>${DOW[d.getDay()]}</span></div><div class="mdn">${by[k].map(x=>{ const pend = !x.by && !x.ok && x.at, wait = x.by && !x.cok; return `<button class="mchip ${pend?"pend":""}" data-k="${k}" data-n="${esc(x.n)}">${esc(x.n)}${pend?"<i>확인 전</i>":wait?"<i class=\"w\">본인 확인 전</i>":x.at?"<i class=\"ok\">✓</i>":""}</button>`; }).join("")}</div></div>`; }).join("");
   return `<div class="mnav"><button id="tmp" aria-label="이전 달">‹</button><b>${y}년 ${m+1}월 쉬는 날</b><button id="tmn" aria-label="다음 달">›</button></div>
     <div class="cal"><div class="wk"><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div><div>일</div></div><div class="grid">${cells}</div></div>
     <div class="mlist">${days || '<div class="empty">이번 달엔 쉬는 사람이 없어요.</div>'}</div>
+    ${wkList(y,m)}
     <p class="subl">날짜를 누르면 조원별로 쉬는 날을 정할 수 있어요. 정한 내용은 그 조원 화면에도 같이 들어가요. 아래 이름을 누르면 종류와 사유가 보여요.</p>`;
+}
+/* 주말·공휴일 출근 현황 (조장 화면) */
+function wkOf(k){ const o = {...((S.team.wkp||{})[k]||{})}; const r = S.rec[k]; if(S.name){ if(r==="w"||r==="o") o[S.name] = r; else delete o[S.name]; } return o; }
+function wkList(y,m){
+  const dim = mk(y,m+1,0).getDate(), out = [], all = S.team.crew.map(p=>p.n); if(S.name && !all.includes(S.name)) all.unshift(S.name);
+  for(let i=1;i<=dim;i++){ const d = mk(y,m,i), k = ymd(d); if(!isRest(d,k)) continue; const o = wkOf(k);
+    const w = all.filter(n=>o[n]==="w"), r = all.filter(n=>o[n]==="o"), u = all.filter(n=>!o[n]);
+    if(!w.length && !r.length) continue;
+    out.push(`<div class="wkd"><div class="wkh">${d.getDate()}일 ${DOW[d.getDay()]}${HOL[k]?` · ${HOL[k][0]}`:""} <b>출근 ${w.length}명</b></div>
+      <div class="wkr"><span>출근</span><p>${w.map(esc).join(", ")||"없음"}</p></div><div class="wkr"><span>쉼</span><p>${r.map(esc).join(", ")||"없음"}</p></div>${u.length?`<div class="wkr q"><span>미정</span><p>${u.map(esc).join(", ")}</p></div>`:""}</div>`); }
+  return out.length ? `<section class="wklist"><h2>주말 출근</h2>${out.join("")}</section>` : "";
 }
 function leaveInfo(k,n){
   const x = teamLeaves(+k.slice(0,4), +k.slice(5,7)-1).find(o=>o.k===k && o.n===n); if(!x) return;
@@ -2138,6 +2162,24 @@ function adminLogin(){
   openDim(); setTimeout(()=>document.getElementById("apw").focus(),80);
 }
 /* 예전 테스트로 생긴 "테스트조"·"가상조원"은 관리자 화면에서 지워요 (대표님 요청). 서버에 남아 있어도 관리자 화면엔 안 보여요. */
+/* 관리자가 지운 조: 서버에 기록이 남아 있어도 관리자 화면에 다시 나타나지 않게 기억해요 (설정 > 지운 조 다시 보이기) */
+const hidT = (name, tid)=>{ const H = (S.co && S.co.hidden)||[], nz = x=>String(x||"").replace(/\s/g,""); return H.some(h=>(tid && h.tid===tid) || (nz(h.name) && nz(h.name)===nz(name))); };
+/* 한 번만: 그동안 테스트로 생긴 조 정리 — 박명현조만 남기고 숨김 (이 날 이후 새로 만든 조는 그대로 보여요) */
+const KEEP_T = "박명현조", CLEAN_AT = Date.parse("2026-11-11T07:00:00+09:00");
+function wipeMine(){ const C = S.co, T = S.team; if(!T) return;            // 이 기기의 내 조·내 기록을 비워요 (관리자 PC에서 테스트로 만든 조)
+  if(T.name) C.hidden = (C.hidden||[]).filter(h=>h.name!==T.name).concat([{name:T.name, tid:T.tid||"", at:Date.now()}]);
+  const t = newTeam(""); C.teams = C.teams.filter(x=>x.id!==T.id); C.teams.push(t); S.myTeam = t.id;
+  Object.assign(S, {name:"", leader:null, rec:{}, memo:{}, shq:{}, okq:{}, shp:{}, shAt:{}}); delete S.fbJoined; delete S.rosterSig; cat = "me"; }
+function cleanOld(){ const C = S.co; if(!C) return;
+  if(!C.clean0){ C.clean0 = true; const T = S.team, nz0 = x=>String(x||"").replace(/\s/g,"");          // 한 번만: 이 컴퓨터가 테스트 조에 들어가 있으면 비워요
+    if(T && T.name && nz0(T.name)!==nz0(KEEP_T) && Date.now() < Date.parse("2026-11-14T00:00:00+09:00")) wipeMine(); shKeep(); }
+  if(C.clean1) return; const nz = x=>String(x||"").replace(/\s/g,""), H = C.hidden = C.hidden||[];
+  const hide = (name, tid)=>{ if(!name || nz(name)===nz(KEEP_T) || hidT(name, tid)) return; H.push({name, tid:tid||"", at:Date.now()}); };
+  C.teams.forEach(t=>{ if(t.id!==S.myTeam && !t.tid) hide(t.name, ""); });   // 서버에 없는(이 컴퓨터에만 있는) 조
+  if(SH.all){ (SH.all.members||[]).forEach(m=>{ if((m.at||0) < CLEAN_AT) hide(m.team, m.tid); });
+    (SH.all.rows||[]).forEach(r=>{ if((r.at||0) < CLEAN_AT && !(SH.all.members||[]).some(m=>m.tid===r.tid && (m.at||0) >= CLEAN_AT)) hide(r.team, r.tid); }); C.clean1 = true; }
+  C.teams = C.teams.filter(t=>t.id===S.myTeam || !hidT(t.name, t.tid)); shKeep(); }
+function hideFilter(){ if(!SH.all) return; cleanOld(); SH.all.teams = (SH.all.teams||[]).filter(t=>!hidT(t.name, t.tid)); SH.all.rows = (SH.all.rows||[]).filter(r=>!hidT(r.team, r.tid)); SH.all.members = (SH.all.members||[]).filter(m=>!hidT(m.team, m.tid)); }
 const JUNK_T = x=>String(x||"").replace(/\s/g,"")==="테스트조", JUNK_N = x=>String(x||"").replace(/\s/g,"")==="가상조원";
 function admClean(){ const C = S.co; if(!C || !C.teams) return; let ch = false;
   C.teams.forEach(t=>{ const n = t.crew.length; t.crew = t.crew.filter(p=>!JUNK_N(p.n)); if(t.crew.length!==n) ch = true; });
@@ -2145,15 +2187,16 @@ function admClean(){ const C = S.co; if(!C || !C.teams) return; let ch = false;
   const keep = C.teams.filter(t=>!JUNK_T(t.name)); if(keep.length!==C.teams.length) ch = true;
   if(junkMine){ const t = newTeam(""); keep.push(t); S.myTeam = t.id;                 // 이 컴퓨터의 테스트 기록도 비워요 (다른 조로 기록이 올라가지 않게)
     S.name = ""; S.leader = null; S.rec = {}; S.memo = {}; S.shq = {}; S.shp = {}; S.shAt = {}; delete S.fbJoined; }
-  C.teams = keep; if(ch) shKeep(); }
-function renderAdmin(){ admClean(); const all = ADM_ALL = S.co.teams; S.co.teams = all.filter(t=>t.name || t.crew.length);   // 이름 없는 빈 조(이 컴퓨터용)는 관리자 목록에서 숨겨요
+  C.teams = keep.filter(t=>t.id===S.myTeam || !hidT(t.name, t.tid)); if(C.teams.length!==keep.length) ch = true;   // 지운 조는 늘 안 보이게
+  if(ch) shKeep(); }
+function renderAdmin(){ admClean(); cleanOld(); const all = ADM_ALL = S.co.teams; S.co.teams = all.filter(t=>t.name || t.crew.length);   // 이름 없는 빈 조(이 컴퓨터용)는 관리자 목록에서 숨겨요
   try{ if(admT && !S.co.teams.some(t=>t.id===admT)) admT = null; admT ? renderAdminTeam() : renderAdminCo(); } finally { S.co.teams = all; ADM_ALL = null; } admBar(); window.scrollTo(0,0); }
 /* 관리자 화면 맨 위 연결 상태 한 줄 (연하게) */
 function admState(){ const a = SH.adSt; if(!shOn() || SH.admNeed || !a) return "";
   if(a.fail) return "서버에 연결하지 못했어요 · 인터넷을 확인해 주세요";
   if(a.recs==="deny" && a.mem==="deny") return `${a.who} 계정은 서버에서 읽기가 막혀 있어요 · 권한 설정이 필요해요`;
   const T = new Set((SH.all&&SH.all.members||[]).map(x=>x.tid)), n = (SH.all&&SH.all.rows||[]).length;
-  return `서버 연결됨 · 조 ${T.size}개 · 기록 ${n}건${a.recs?" · 기록 읽기 막힘":""}${a.mem?" · 명단 읽기 막힘":""} · ${a.who}`; }
+  return `서버 연결됨 · 조 ${T.size}개 · 기록 ${n}건${a.recs?" · 기록 읽기 막힘":""}${a.mem?" · 가입자 읽기 막힘":""}${a.tms?" · 조장 명단 읽기 막힘":""} · ${a.who}`; }
 function admBar(){ const st = admState(); if(st && !SH.admNeed){ const v0 = document.getElementById("v-admin"), d0 = document.createElement("div");
     d0.className = "admst"; d0.textContent = st; v0.prepend(d0); }
   if(!SH.admNeed) return; const v = document.getElementById("v-admin"), d = document.createElement("div");
@@ -2262,7 +2305,7 @@ function adShell(o){
       </aside>
       <div class="smain">
         <div class="scard">${o.tabs?`<div class="stabs2">${o.tabs.map(t=>`<button data-tab="${t[0]}" class="${admTab===t[0]?"on":""}">${t[1]}</button>`).join("")}</div>`:""}<div class="sinner">${o.body}</div></div>
-        <footer class="sfoot"><div class="sin"><div><b>팀근무관리</b><span>${esc(C.name||"우리 회사")} · ${adToday()}</span></div><span class="sby">제작 안두현</span></div></footer>
+        <footer class="sfoot"><div class="sin"><div><b>팀근무관리</b><span>${esc(C.name||"우리 회사")} · ${adToday()}</span></div><span class="sby">제작 안두현 · ${APP_VER}</span></div></footer>
       </div>
     </div>`;
 }
@@ -2447,7 +2490,7 @@ function renderAdminTeam(){
         <section class="spanel" id="ad-mng"><div class="sph"><span class="snum">03</span><h2>이 조 관리</h2></div>
           <div class="linfo"><div><span>이 폰</span><b>${T.id===S.team.id?"이 조로 쓰는 중":"다른 조"}</b></div></div>
           ${T.id===S.team.id?"":`<button class="adbtn" id="adUse">이 폰을 이 조로 쓰기</button>`}
-          ${C.teams.length>1?`<button class="lnk quiet" id="adDelT">이 조 삭제</button>`:""}</section>
+          <button class="lnk quiet" id="adDelT">이 조 삭제</button></section>
       </div>
     </div>`;
   document.getElementById("v-admin").innerHTML = adShell({top:"org", side:"t:"+T.id, body});
@@ -2462,7 +2505,9 @@ function renderAdminTeam(){
   document.querySelectorAll("[data-ai]").forEach(b=>b.onclick=()=>adminMem(T,+b.dataset.ai));
   if(q("adUse")) q("adUse").onclick = ()=>{ S.myTeam = T.id; S.leader = null; cat = "me"; save(); applyRole(); renderAdmin(); toast(`이 폰을 ${T.name}로 바꿨어요`); };
   if(q("adPw")) q("adPw").onclick = ()=>{ if(!confirmDel("pw"+T.id)) return; delete T.lpw; if(T.id===S.team.id){ S.leader = null; cat = "me"; } save(); renderAdmin(); toast("조장 비밀번호를 지웠어요"); };
-  if(q("adDelT")) q("adDelT").onclick = ()=>{ if(!confirmDel("del"+T.id)) return; C.teams = C.teams.filter(t=>t.id!==T.id); if(S.myTeam===T.id){ S.myTeam = C.teams[0].id; S.leader = null; cat = "me"; } admT = null; admTab = "org"; save(); applyRole(); renderAdmin(); toast("조를 삭제했어요"); };
+  if(q("adDelT")) q("adDelT").onclick = ()=>{ if(!confirmDel("del"+T.id)) return;
+    if(T.id===S.myTeam) wipeMine(); else { C.teams = C.teams.filter(t=>t.id!==T.id); C.hidden = (C.hidden||[]).filter(h=>h.name!==T.name).concat([{name:T.name, tid:T.tid||"", at:Date.now()}]); }
+    hideFilter(); admT = null; admTab = "org"; save(); applyRole(); renderAdmin(); toast("조를 삭제했어요"); };
 }
 function natModal(T, i){
   const p = T.crew[i];
@@ -2492,7 +2537,7 @@ async function viewAs(T, name){
   let rows = [];
   try{ const {collection, query, where, getDocs} = FB.m, months = yms(shFrom(), 6);
     const sn = await withTO(getDocs(query(collection(FB.adb, "u2recs"), where("tid","==",T.tid), where("ym","in",months))), 20000);
-    rows = sn.docs.map(d=>d.data()).filter(r=>r.name); }
+    rows = sn.docs.map(d=>d.data()).filter(r=>r.name && r.kind!=="roster"); }
   catch(e){ console.warn("[viewas]", e && e.message); toast("기록을 못 불러왔어요"); return; }
   const tk = todayK(), leaves = {};
   rows.forEach(r=>{ if(!LVT.includes(r.code)) return; const by = r.by && r.by!==r.name ? r.by : null;
@@ -2519,10 +2564,13 @@ function adminSettings(){
   const sh = document.getElementById("sheet");
   sh.innerHTML = `<h3>설정</h3><p>자주 쓰지 않는 기능이에요.</p>
     <button class="adbtn" id="apwc" style="margin-top:0">관리자 비밀번호 바꾸기</button>
+    ${(S.co.hidden||[]).length?`<button class="adbtn" id="unh">지운 조 다시 보이기 (${S.co.hidden.length}개)</button>`:""}
     <button class="close" id="cls">닫기</button>
     <div style="text-align:center;margin-top:14px"><button class="lnk quiet" id="rst">데이터 초기화</button></div>`;
   document.getElementById("cls").onclick = closeDim;
   document.getElementById("rst").onclick = resetSheet;
+  const uh = document.getElementById("unh"); if(uh) uh.onclick = ()=>modal("지운 조 다시 보이기", "누르면 그 조가 관리자 화면에 다시 나타나요.", S.co.hidden.map((h,i)=>({v:String(i), l:h.name, full:1})), v=>{
+    const h = S.co.hidden.splice(+v,1)[0]; save(); closeDim(); toast(`${h.name}를 다시 보이게 했어요`); shPullAll(); });
   document.getElementById("apwc").onclick = ()=>{
     sh.innerHTML = `<h3>관리자 비밀번호 바꾸기</h3><p>새 비밀번호를 4자리 이상 넣어주세요.</p><input id="npw" type="password" inputmode="numeric" maxlength="12" placeholder="새 비밀번호"><button class="opt full" id="npws" style="width:100%;margin-top:10px;background:var(--trust);color:#fff;border-color:var(--trust)">바꾸기</button><button class="close" id="cls">닫기</button>`;
     document.getElementById("cls").onclick = closeDim;
@@ -2678,12 +2726,14 @@ async function shFlush(){
       await withTO(b.commit(), 15000);
       part.forEach(r=>{ if(S.shq[r.id] && S.shq[r.id].at===r.at) delete S.shq[r.id]; });
     }
+    try{ await rosterPush(); }catch(e){ console.warn("[roster]", e && e.message); }   // 조장: 명단을 서버로
     const oks = Object.entries(S.okq||{});                       // 조장 확인 표시 (조원 기록에 덧붙임)
     if(oks.length){
-      const {writeBatch, doc} = FB.m, b = writeBatch(FB.db);
-      oks.forEach(([id,o])=>b.set(doc(FB.db, "u2recs", recId(o)), {ok:true, okBy:o.okBy, okAt:o.okAt}, {merge:true}));
-      await withTO(b.commit(), 15000);
-      oks.forEach(([id,o])=>{ if(S.okq[id] && S.okq[id].okAt===o.okAt) delete S.okq[id]; });
+      try{ const {writeBatch, doc} = FB.m, b = writeBatch(FB.db);
+        oks.forEach(([id,o])=>b.set(doc(FB.db, "u2recs", recId(o)), {ok:true, okBy:o.okBy, okAt:o.okAt}, {merge:true}));
+        await withTO(b.commit(), 15000); SH.okErr = false;
+        oks.forEach(([id,o])=>{ if(S.okq[id] && S.okq[id].okAt===o.okAt) delete S.okq[id]; });
+      }catch(e){ SH.okErr = true; console.warn("[ok]", e && e.message); if(/permission/i.test(String(e && (e.code||e.message)))) S.okq = {}; }
     }
     SH.err = false; SH.last = Date.now(); shKeep();
   }catch(e){ SH.err = true; console.warn("[sync]", e && e.message); }
@@ -2691,13 +2741,35 @@ async function shFlush(){
   if(!SH.err && (Object.keys(S.shq||{}).length || Object.keys(S.okq||{}).length)) shFlushSoon();
   else if(SH.err){ clearTimeout(SH.retry); SH.retry = setTimeout(shFlush, 20000); }
 }
+/* 조장 폰의 명단(이름·조장/부조장·특이사항·요일 고정)을 서버 조 문서에 — 관리자·조원 화면이 같은 명단을 봐요 */
+const rosterOf = t => t.crew.map(p=>{ const o = {n:p.n}; if(p.role) o.role = p.role; if(p.sub) o.sub = true; if(p.note) o.note = p.note; if(p.fixed && Object.keys(p.fixed).length) o.fixed = p.fixed; if(p.nat) o.nat = p.nat; return o; });
+async function rosterPush(){
+  if(!isLeader() || !shTid()) return; const crew = rosterOf(S.team), ym = todayK().slice(0,7), sig = JSON.stringify([shTeam(), crew, ym]);
+  if(S.rosterSig===sig) return; const at = Date.now(); let ok = 0;
+  // ① 기록과 같은 칸 (조원 기록이 오가는 길이라 가장 확실해요)
+  try{ await withTO(FB.m.setDoc(FB.m.doc(FB.db, "u2recs", shTid()+"_roster"), {tid:shTid(), team:shTeam(), ym, date:"roster", name:"", code:"", reason:"", by:S.name, at, kind:"roster", crew}), 15000); ok++; }
+  catch(e){ console.warn("[roster recs]", e && e.message); }
+  // ② 조 문서
+  try{ await withTO(FB.m.setDoc(FB.m.doc(FB.db, "u2teams", shTid()), {name:shTeam(), crew, crewBy:S.name, crewAt:at, ...(S.team.own?{leaderUid:FB.auth.currentUser.uid}:{})}, {merge:true}), 15000); ok++; }
+  catch(e){ console.warn("[roster team]", e && e.message); }
+  SH.rosterErr = !ok; if(ok){ S.rosterSig = sig; shKeep(); } }
+function rosterApply(R){
+  if(isLeader() || !Array.isArray(R) || !R.length) return false;
+  const old = S.team.crew, me = S.name, next = R.map(x=>{ const o = old.find(p=>p.n===x.n)||{}; return {n:x.n, r:o.r||"", ...(o.reason?{reason:o.reason}:{}), ...(x.role?{role:x.role}:{}), ...(x.sub?{sub:true}:{})}; });
+  old.forEach(p=>{ if(!next.some(x=>x.n===p.n) && p.n===me) next.push(p); });
+  if(JSON.stringify(next)===JSON.stringify(old)) return false; S.team.crew = next; return true; }
+/* 조원 폰: 조장님 명단 받아오기 (실시간 기록에 같이 오고, 없으면 조 문서에서) */
+async function rosterPull(){
+  if(isLeader() || !shTid() || SH.gotRoster) return;
+  const sn = await withTO(FB.m.getDoc(FB.m.doc(FB.db, "u2teams", shTid())), 15000); if(!sn.exists()) return;
+  if(rosterApply((sn.data()||{}).crew)){ shKeep(); shRerender(); } }
 /* 우리 조 기록 실시간으로 듣기 → 조장 화면·달력·새 소식에 반영 */
 async function shPull(){
   if(!shOn() || !S.name || !S.team || SH.pulling) return; SH.pulling = true;
   try{
     shFlush();
     if(!await fbJoin()) throw new Error("no team");
-    mealPull();
+    mealPull(); rosterPull().catch(e=>console.warn("[roster]", e && e.message));
     const months = yms(shFrom(), 6), key = shTid()+"|"+months.join(",");
     if(FB.lk !== key){
       FB.un.forEach(u=>u()); FB.un = []; FB.lk = key;
@@ -2727,13 +2799,17 @@ async function shPullAll(){
     SH.admNeed = false;
     const {collection, collectionGroup, query, where, getDocs} = FB.m;
     const from = ymd(workDays()[0] || new Date()), months = yms(from, 3);
-    const [r, m] = await Promise.allSettled([withTO(getDocs(query(collection(FB.adb, "u2recs"), where("ym","in",months))), 20000), withTO(getDocs(collectionGroup(FB.adb, "members")), 20000)]);
+    const [r, m, tm] = await Promise.allSettled([withTO(getDocs(query(collection(FB.adb, "u2recs"), where("ym","in",months))), 20000), withTO(getDocs(collectionGroup(FB.adb, "members")), 20000), withTO(getDocs(collection(FB.adb, "u2teams")), 20000)]);
     const why = x=>x.status==="rejected" ? (/permission/i.test(String(x.reason&&(x.reason.code||x.reason.message)))?"deny":"fail") : "";
-    SH.adSt = {at:Date.now(), who:FB.aauth.currentUser.email||"", recs:why(r), mem:why(m)};
+    SH.adSt = {at:Date.now(), who:FB.aauth.currentUser.email||"", recs:why(r), mem:why(m), tms:(why(tm) && why(r)) ? why(tm) : ""};
     if(r.status==="rejected" && m.status==="rejected") throw r.reason;
-    const rows = r.status==="fulfilled" ? r.value.docs.map(d=>d.data()).filter(x=>x.date>=from && x.code) : [];
+    const raw = r.status==="fulfilled" ? r.value.docs.map(d=>d.data()) : [];
+    const rows = raw.filter(x=>x.kind!=="roster" && x.name && x.date>=from && x.code), ros = raw.filter(x=>x.kind==="roster" && x.tid);
     const mem = m.status==="fulfilled" ? m.value.docs.map(d=>d.data()) : [];
-    SH.all = {ok:true, rows:rows.filter(x=>!JUNK_T(x.team) && !JUNK_N(x.name)), members:mem.filter(x=>x.tid && !JUNK_T(x.team) && !JUNK_N(x.name))}; SH.err = false; shMergeAll(); if(view==="admin") renderAdmin();
+    const tms = tm.status==="fulfilled" ? tm.value.docs.map(d=>({tid:d.id, ...d.data()})).filter(x=>x.name && !JUNK_T(x.name)) : [];
+    ros.forEach(x=>{ if(JUNK_T(x.team)) return; const t = tms.find(y=>y.tid===x.tid);                       // 더 최근 명단을 써요
+      if(!t) tms.push({tid:x.tid, name:x.team, crew:x.crew, crewAt:x.at}); else if(!t.crew || (x.at||0) >= (t.crewAt||0)){ t.crew = x.crew; t.crewAt = x.at; } });
+    SH.all = {ok:true, rows:rows.filter(x=>!JUNK_T(x.team) && !JUNK_N(x.name)), members:mem.filter(x=>x.tid && !JUNK_T(x.team) && !JUNK_N(x.name)), teams:tms}; SH.err = false; hideFilter(); shMergeAll(); if(view==="admin") renderAdmin();
   }catch(e){ SH.err = true; SH.adSt = {at:Date.now(), who:(FB.aauth&&FB.aauth.currentUser&&FB.aauth.currentUser.email)||"", recs:"deny", mem:"deny", fail:!/permission/i.test(String(e&&(e.code||e.message)))}; console.warn("[admin]", e && e.message); if(view==="admin") renderAdmin(); }
   shStatus();
 }
@@ -2747,6 +2823,13 @@ function shMergeAll(){
     let p = t.crew.find(x=>x.n===name); if(!p){ p = {n:name, r:""}; t.crew.push(p); ch = true; }
     if(role==="조장" && !lead(t)){ p.role = "leader"; ch = true; }
     if(!p.nat && NAT[lang]){ p.nat = NAT[lang]; ch = true; } };
+  // 조장 폰 명단이 있으면 그 명단 그대로 (이름·조장/부조장·특이사항·요일 고정). 국적은 관리자가 정한 게 우선.
+  (SH.all.teams||[]).forEach(T=>{ if(!Array.isArray(T.crew) || !T.crew.length) return;
+    let t = find(T.tid, T.name); if(!t){ t = newTeam(T.name); t.tid = T.tid; C.teams.push(t); } else if(!t.tid && t.id!==S.myTeam) t.tid = T.tid;
+    if(t.id===S.myTeam) return;
+    const next = T.crew.map(x=>{ const o = t.crew.find(p=>p.n===x.n)||{}; const q = {n:x.n, r:o.r||""};
+      if(x.role) q.role = x.role; if(x.sub) q.sub = true; if(x.note) q.note = x.note; if(x.fixed) q.fixed = x.fixed; const nat = o.nat || x.nat; if(nat) q.nat = nat; return q; });
+    if(JSON.stringify(next)!==JSON.stringify(t.crew)){ t.crew = next; ch = true; } });
   (SH.all.members||[]).forEach(m=>put(m.tid, m.team, m.name, m.role, m.lang));
   (SH.all.rows||[]).forEach(r=>put(r.tid, r.team, r.name));
   if(ch) shKeep();
@@ -2772,8 +2855,10 @@ function shDiffMine(){
 }
 function shFlushSoon(){ if(!shOn()) return; clearTimeout(SH.timer); SH.timer = setTimeout(shFlush, 600); }
 function shApply(j){
-  const before = JSON.stringify([S.team.crew, S.team.leaves, S.rec, S.team.notes]);
-  const me = S.name, tk = todayK(), rows = j.rows||[], pend = S.shq||{}, lead = isLeader();
+  const before = JSON.stringify([S.team.crew, S.team.leaves, S.rec, S.team.notes, S.team.wkp]);
+  const me = S.name, tk = todayK(), pend = S.shq||{}, lead = isLeader();
+  const ro = (j.rows||[]).filter(r=>r.kind==="roster").sort((a,b)=>(b.at||0)-(a.at||0))[0], rows = (j.rows||[]).filter(r=>r.kind!=="roster" && r.name);
+  if(ro){ SH.gotRoster = true; rosterApply(ro.crew); }                       // 조장님 명단
   // 명단: 시트에 있는 사람을 우리 조 목록에 추가
   const names = new Set((j.members||[]).map(m=>m.name)); rows.forEach(r=>names.add(r.name));
   names.forEach(n=>{ if(n && n!==me && !S.team.crew.some(p=>p.n===n)) S.team.crew.push({n, r:""}); });
@@ -2795,6 +2880,9 @@ function shApply(j){
   });
   if(lead && !first) Object.keys(seen).forEach(sk=>{ if(now[sk]) return; const [n,k] = sk.split("|"); if(k>=tk) addNote(n, k, seen[sk].split("|")[0], "del"); });
   S.shSeen = now; S.shSeenInit = true;
+  // 주말·공휴일: 누가 출근(w)하고 누가 쉬는지(o)
+  const WK = {}; rows.forEach(r=>{ if(r.code==="w" || r.code==="o") (WK[r.date] = WK[r.date]||{})[r.name] = r.code; });
+  if(JSON.stringify(WK)!==JSON.stringify(S.team.wkp||{})){ S.team.wkp = WK; }
   // 조장님이 내 쉬는 날을 확인했는지 (서버 표시)
   rows.forEach(r=>{ if(r.name!==me || !r.ok || pend[r.date+"|"+me]) return; const x = (L[r.date]||[]).find(o=>o.n===me);
     if(x && !x.by && !x.ok && x.t===r.code){ x.ok = true; x.okBy = r.okBy||""; x.okAt = r.okAt||0; } });
@@ -2806,7 +2894,7 @@ function shApply(j){
       S.shp[r.date] = JSON.stringify([r.code, (S.memo[r.date]||{}).reason||"", r.by]);
       if(r.date===tk) toast(`조장님이 오늘 ${TST[r.code]||LBL[r.code]||r.code}로 넣었어요`); } });
   syncFromLead();
-  return before !== JSON.stringify([S.team.crew, S.team.leaves, S.rec, S.team.notes]);
+  return before !== JSON.stringify([S.team.crew, S.team.leaves, S.rec, S.team.notes, S.team.wkp]);
 }
 function shRerender(){
   if(document.getElementById("dim").classList.contains("show")) return;
@@ -2818,10 +2906,11 @@ function shStatus(){
   const el = document.getElementById("shst"); if(!el) return;
   if(!shOn()){ el.textContent = ""; return; }
   const n = Object.keys(S.shq||{}).length;
-  el.textContent = (S.name && S.team && !shTid() && !isLeader()) ? "조장님께 새 초대 링크를 받아 다시 들어와 주세요" : SH.err ? "연결이 잠시 끊겼어요 · 다시 시도할게요" : (SH.busy || n) ? "저장 중…" : SH.last ? "실시간 연결됨" : "";
+  el.textContent = (S.name && S.team && !shTid() && !isLeader()) ? "조장님께 새 초대 링크를 받아 다시 들어와 주세요" : SH.err ? "연결이 잠시 끊겼어요 · 다시 시도할게요" : SH.rosterErr ? "명단을 서버에 못 올렸어요 · 대표님께 알려주세요" : SH.okErr ? "확인 표시를 서버에 못 올렸어요 · 대표님께 알려주세요" : (SH.busy || n) ? "저장 중…" : SH.last ? "실시간 연결됨" : "";
 }
 window.addEventListener("online", ()=>{ shFlush(); });
 setInterval(()=>{ if(document.hidden || !shOn()) return; if(view==="admin") shPullAll(); else shPull(); }, 60000);
+setInterval(()=>{ if(document.hidden || !shOn() || view!=="admin") return; shPullAll(); }, 20000);   // 관리자 화면은 20초마다 새로
 document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && shOn()){ if(view==="admin") shPullAll(); else shPull(); } });
 if(shOn()) fbLoad().then(()=>{ if(S.name) shPull(); }).catch(e=>{ SH.err = true; shStatus(); });
 
@@ -2954,6 +3043,7 @@ if(TEST && !S.name){   // 테스트용 계정과 조원을 미리 넣어둠
   save(); applyRole(); go("today");
 }
 if(TEST){ const tb = document.createElement("div"); tb.className = "testb"; tb.textContent = "테스트 모드 · 실제 기록과 연결 안 됨"; document.body.appendChild(tb); }
+{ const av = document.getElementById("appv"); if(av) av.textContent = "· "+APP_VER; }
 if(location.hash==="#admin") checkHash(); else if(!S.name) regModal(); else checkHash();
 </script>
 </body>
