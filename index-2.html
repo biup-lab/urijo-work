@@ -1057,7 +1057,7 @@ const josa = w => ((w.charCodeAt(w.length-1)-0xAC00)%28 ? "이에요" : "예요"
 const TEST_FLAG = false;
 const TEST = TEST_FLAG && !/github\.io$/i.test(location.hostname);
 const KEY = TEST ? "teamwork2-test" : "teamwork2-v1";
-const APP_VER = "1113-1";   // 화면 맨 아래에 작게 보여요. 폰마다 새 버전인지 확인용
+const APP_VER = "1113-2";   // 화면 맨 아래에 작게 보여요. 폰마다 새 버전인지 확인용
 let VIEWAS = null;   // 관리자가 다른 사람 화면을 "보기 전용"으로 볼 때 (이때는 아무것도 저장·전송 안 해요)
 
 let S = {name:"", rec:{}, wk:{}, chk:{}};
@@ -3128,6 +3128,27 @@ if(TEST && !S.name){   // 테스트용 계정과 조원을 미리 넣어둠
 }
 if(TEST){ const tb = document.createElement("div"); tb.className = "testb"; tb.textContent = "테스트 모드 · 실제 기록과 연결 안 됨"; document.body.appendChild(tb); }
 { const av = document.getElementById("appv"); if(av) av.textContent = "· "+APP_VER; }
+/* 새 버전이 올라오면 직원이 아무것도 안 해도 알아서 새로고침해요.
+   앱을 다시 볼 때·10분마다 서버의 버전 번호를 확인 → 다르면, 입력 중이 아닐 때 조용히 새로 불러와요. */
+let updPending = false;
+async function updCheck(){
+  if(!/^https?:/.test(location.protocol) || TEST) return;
+  try{ const url = location.href.split("#")[0], r = await fetch(url, {cache:"reload"}); if(!r.ok) return;
+    const m = (await r.text()).match(/const APP_VER = "([^"]+)"/); if(!m || m[1]===APP_VER) return;
+    let last = ""; try{ last = sessionStorage.getItem("updTo")||""; }catch(e){}
+    if(last===m[1]) return;                                   // 같은 버전으로 두 번 새로고침하지 않아요
+    updPending = m[1]; updApply();
+  }catch(e){}
+}
+function updApply(){
+  if(!updPending) return;
+  const busy = document.getElementById("dim").classList.contains("show") || /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement||{}).tagName||"");
+  if(busy){ setTimeout(updApply, 15000); return; }
+  try{ sessionStorage.setItem("updTo", updPending); }catch(e){}
+  try{ shKeep(); }catch(e){} location.reload();
+}
+setTimeout(updCheck, 4000); setInterval(()=>{ if(!document.hidden) updCheck(); }, 600000);
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) updCheck(); });
 if(location.hash==="#admin") checkHash(); else if(!S.name) regModal(); else checkHash();
 </script>
 </body>
