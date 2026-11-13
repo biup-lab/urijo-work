@@ -954,6 +954,7 @@ body.wide{padding-bottom:0}
 .wki svg{width:20px;height:20px}
 .wkt{display:flex;gap:10px;min-width:92px;justify-content:flex-end}
 .wkt b{font-weight:700}.wkt i{font-style:normal;opacity:.75}
+.jn{font-style:normal;font-size:11.5px;font-weight:700;color:var(--discovery);background:var(--soft);border-radius:6px;padding:1px 6px;margin-right:6px}.jn.no{color:#9AA4B2;background:#F2F4F6}
 .admst{margin:10px 16px 0;font-size:12.5px;color:var(--sub);text-align:right}
 /* 쉬는 날 계획: 우리 조 쉬는 날 */
 .crewoff{margin-top:28px;background:var(--card);border-radius:20px;padding:20px 18px 8px}
@@ -1056,7 +1057,7 @@ const josa = w => ((w.charCodeAt(w.length-1)-0xAC00)%28 ? "이에요" : "예요"
 const TEST_FLAG = false;
 const TEST = TEST_FLAG && !/github\.io$/i.test(location.hostname);
 const KEY = TEST ? "teamwork2-test" : "teamwork2-v1";
-const APP_VER = "1111-6";   // 화면 맨 아래에 작게 보여요. 폰마다 새 버전인지 확인용
+const APP_VER = "1113-1";   // 화면 맨 아래에 작게 보여요. 폰마다 새 버전인지 확인용
 let VIEWAS = null;   // 관리자가 다른 사람 화면을 "보기 전용"으로 볼 때 (이때는 아무것도 저장·전송 안 해요)
 
 let S = {name:"", rec:{}, wk:{}, chk:{}};
@@ -1131,11 +1132,11 @@ function leadOk(n,k){ const x = ((S.team.leaves||{})[k]||[]).find(o=>o.n===n); i
   S.team.notes = (S.team.notes||[]).filter(o=>!(o.n===n && o.k===k)); }
 function noteSheet(){
   const notes = [...(S.team.notes||[])].sort((a,b)=>b.at-a.at), sh = document.getElementById("sheet");
-  const KIND = {add:["신청","b"], change:["변경","p"], del:["취소","r"]};
+  const KIND = {add:["신청","b"], change:["변경","p"], del:["취소","r"]}, LB = c => ({...LBL, w:"주말 출근", o:"주말 쉼"})[c]||c;
   sh.innerHTML = `<h3>새 소식 ${notes.length}건</h3><p>확인을 누르면 목록에서 사라지고, 조원 화면에 “조장 확인”이 표시돼요.</p>
     ${notes.length?`<div class="nlist">${notes.map(o=>{ const d = new Date(o.k+"T00:00:00"), kd = KIND[o.kind]||KIND.add;
       return `<div class="nrow"><div class="nl"><div class="nt"><b>${esc(o.n)}</b><span class="qt ${kd[1]}">${kd[0]}</span><small>${ago(o.at)}</small></div>
-        <div class="nd">${md(d)} ${DOW[d.getDay()]} · ${o.kind==="change"?`${LBL[o.prev]||o.prev} → `:""}${o.kind==="del"?`${LBL[o.t]||o.t} 취소`:(LBL[o.t]||o.t)}${o.reason&&o.kind!=="del"?" · "+esc(o.reason):""}</div></div>
+        <div class="nd">${md(d)} ${DOW[d.getDay()]} · ${o.kind==="change"?`${LB(o.prev)} → `:""}${o.kind==="del"?`${LB(o.t)} 취소`:LB(o.t)}${o.reason&&o.kind!=="del"?" · "+esc(o.reason):""}</div></div>
         <button class="nok" data-nn="${esc(o.n)}" data-nk="${o.k}">확인</button></div>`; }).join("")}</div>
       <button class="opt full" id="nAll" style="width:100%;margin-top:12px;background:var(--discovery);color:#fff;border-color:var(--discovery)">모두 확인</button>`
     :`<div class="empty">새 소식이 없어요. 조원이 쉬는 날을 넣거나 바꾸면 여기에 떠요.</div>`}
@@ -1376,7 +1377,8 @@ function renderLeave(){
     <div class="cal"><div class="wk"><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div><div>일</div></div><div class="grid">${cells}</div>
       <div class="legend"><span><i class="c-a"></i>연차</span><span><i class="c-h"></i>반차</span><span><i class="c-m"></i>월차</span><span><i class="c-w"></i>주말 출근</span><span><i style="background:#E3E7EC"></i>다른 조원</span></div></div>
     <div class="plist">${rows}</div>
-    ${crewOffHTML(y,m)}`;
+    ${crewOffHTML(y,m)}
+    ${wkList(y,m)}`;
   document.getElementById("lp").onclick=()=>{ lm = shift(lm,-1); renderLeave(); };
   document.getElementById("ln").onclick=()=>{ lm = shift(lm,1); renderLeave(); };
   document.querySelectorAll("#v-leave [data-fill]").forEach(b=>b.onclick=()=>fillWeek(b.dataset.fill));
@@ -1797,7 +1799,7 @@ function dayInfo(k){
 function teamMng(){
   const {y,m} = {y:new Date().getFullYear(), m:new Date().getMonth()}, lv = teamLeaves(y,m);
   const rows = S.team.crew.map((p,i)=>{ const cnt = lv.filter(x=>x.n===p.n && x.t!=="e").length;
-    return `<button class="mrow" data-mi="${i}"><div class="mtop"><b>${esc(p.n)}</b>${p.role==="leader"?'<span class="mtag">조장</span>':p.sub?'<span class="mtag">부조장</span>':""}<span class="mcnt">이번 달 쉰 날 ${cnt}일</span></div>${p.fixed&&fxText(p.fixed)?`<div class="mfix">요일 고정 ${fxText(p.fixed)}</div>`:""}<div class="mnote">${esc(p.note||"특이사항 없음")}</div></button>`; }).join("");
+    return `<button class="mrow" data-mi="${i}"><div class="mtop"><b>${esc(p.n)}</b>${p.role==="leader"?'<span class="mtag">조장</span>':p.sub?'<span class="mtag">부조장</span>':""}<span class="mcnt">${(S.team.joined||[]).includes(p.n)||p.n===S.name?'<em class="jn">가입함</em>':'<em class="jn no">미가입</em>'} 이번 달 쉰 날 ${cnt}일</span></div>${p.fixed&&fxText(p.fixed)?`<div class="mfix">요일 고정 ${fxText(p.fixed)}</div>`:""}<div class="mnote">${esc(p.note||"특이사항 없음")}</div></button>`; }).join("");
   return `<div class="tboard" style="padding:4px 16px">${rows}</div>
     <div class="madd"><input id="newName" maxlength="10" placeholder="새 조원 이름"><button id="addBtn">추가</button></div>
     <button class="tcta" id="invite" style="background:var(--card);color:var(--discovery);border:1.5px solid var(--discovery)">조원 초대 링크 복사</button>
@@ -2594,8 +2596,12 @@ async function viewAs(T, name){
   toast("불러오는 중…");
   let rows = [];
   try{ const {collection, query, where, getDocs} = FB.m, months = yms(shFrom(), 6);
-    const sn = await withTO(getDocs(query(collection(FB.adb, "u2recs"), where("tid","==",T.tid), where("ym","in",months))), 20000);
-    rows = sn.docs.map(d=>d.data()).filter(r=>r.name && r.kind!=="roster"); }
+    // 같은 이름 조가 서버에 여러 개면 모두 읽어서 합쳐요 (같은 사람·날짜는 최신 기록)
+    const tids = [...new Set([T.tid, ...((SH.all&&SH.all.teams)||[]).filter(x=>nzT(x.name)===nzT(T.name)).map(x=>x.tid)])];
+    const by = {};
+    for(const tid of tids){ const sn = await withTO(getDocs(query(collection(FB.adb, "u2recs"), where("tid","==",tid), where("ym","in",months))), 20000).catch(()=>null); if(!sn) continue;
+      sn.docs.map(d=>d.data()).filter(r=>r.name && r.kind!=="roster").forEach(r=>{ const k = r.date+"|"+r.name; if(!by[k] || (r.at||0) > (by[k].at||0)) by[k] = r; }); }
+    rows = Object.values(by); }
   catch(e){ console.warn("[viewas]", e && e.message); toast("기록을 못 불러왔어요"); return; }
   const tk = todayK(), leaves = {};
   rows.forEach(r=>{ if(!LVT.includes(r.code)) return; const by = r.by && r.by!==r.name ? r.by : null;
@@ -2759,10 +2765,27 @@ function fbLoad(){
   return FB.p;
 }
 const withTO = (p, ms) => Promise.race([p, new Promise((_,rj)=>setTimeout(()=>rj(new Error("timeout")), ms))]);
+/* 같은 이름의 조가 서버에 여러 개면(다른 브라우저·폰에서 조장이 다시 가입한 경우) 하나로 모아요.
+   기준: 조장이 가장 최근에 명단을 올린 조. 내 기록은 그 조로 다시 보내요. */
+const nzT = x => String(x||"").replace(/\s/g,"");
+async function teamCanon(){
+  if(SH.canonDone || !S.team || !S.team.name) return; SH.canonDone = true;
+  try{ const f = await fbLoad(), sn = await withTO(f.m.getDocs(f.m.collection(f.db, "u2teams")), 15000);
+    const same = sn.docs.map(d=>({tid:d.id, ...d.data()})).filter(t=>nzT(t.name)===nzT(S.team.name));
+    if(!same.length) return;
+    same.sort((a,b)=>(b.crewAt||0)-(a.crewAt||0) || (a.tid<b.tid?-1:1));
+    const c = same[0]; if(c.tid===S.team.tid) return;
+    if(same.length===1 && S.team.tid) return;                 // 이름이 같은 조가 하나뿐이고 이미 다른 조에 있으면 건드리지 않아요
+    const was = S.team.tid; S.team.tid = c.tid; S.team.own = c.leaderUid===f.auth.currentUser.uid;
+    delete S.fbJoined; S.shp = {}; S.shAt = {}; delete S.rosterSig; FB.lk = ""; FB.un.forEach(u=>u()); FB.un = [];
+    try{ shDiffMine(); }catch(e){}                              // 내 기록 전부를 새 조로 다시 보내요
+    console.warn("[canon] 조를 하나로 모았어요", was, "→", c.tid); shKeep();
+  }catch(e){ SH.canonDone = false; console.warn("[canon]", e && e.message); }
+}
 /* 조 만들기·들어가기 (한 번만) */
 async function fbJoin(){
   if(!S.name || !S.team || !S.team.name) return false;
-  if(!S.team.tid){ if(!isLeader()) return false; S.team.tid = newTid(); S.team.own = true; shKeep(); }
+  if(!S.team.tid){ if(!isLeader()) return false; await teamCanon(); if(!S.team.tid){ S.team.tid = newTid(); S.team.own = true; } shKeep(); }
   const f = await fbLoad(), {doc, setDoc} = f.m, uid = f.auth.currentUser.uid, role = isLeader() ? "조장" : "조원";
   const lang = S.lang||"ko", sig = [shTid(), uid, S.name, role, shTeam(), lang].join("|");
   if(S.fbJoined===sig) return true;
@@ -2823,6 +2846,7 @@ async function rosterPull(){
 async function shPull(){
   if(!shOn() || !S.name || !S.team || SH.pulling) return; SH.pulling = true;
   try{
+    await teamCanon();
     shFlush();
     if(!await fbJoin()) throw new Error("no team");
     mealPull(); rosterPull().catch(e=>console.warn("[roster]", e && e.message));
@@ -2911,12 +2935,13 @@ function shDiffMine(){
 }
 function shFlushSoon(){ if(!shOn()) return; clearTimeout(SH.timer); SH.timer = setTimeout(shFlush, 600); }
 function shApply(j){
-  const before = JSON.stringify([S.team.crew, S.team.leaves, S.rec, S.team.notes, S.team.wkp]);
+  const before = JSON.stringify([S.team.crew, S.team.leaves, S.rec, S.team.notes, S.team.wkp, S.team.joined]);
   const me = S.name, tk = todayK(), pend = S.shq||{}, lead = isLeader();
   const ro = (j.rows||[]).filter(r=>r.kind==="roster").sort((a,b)=>(b.at||0)-(a.at||0))[0], rows = (j.rows||[]).filter(r=>r.kind!=="roster" && r.name);
   if(ro){ SH.gotRoster = true; rosterApply(ro.crew); }                       // 조장님 명단
   // 명단: 시트에 있는 사람을 우리 조 목록에 추가
   const names = new Set((j.members||[]).map(m=>m.name)); rows.forEach(r=>names.add(r.name));
+  S.team.joined = [...new Set((j.members||[]).map(m=>m.name).filter(Boolean))];   // 자기 폰으로 가입한 사람
   names.forEach(n=>{ if(n && n!==me && !S.team.crew.some(p=>p.n===n)) S.team.crew.push({n, r:""}); });
   // 오늘 누가 몇 시 퇴근인지
   S.team.crew.forEach(p=>{ if(p.n===me || pend[tk+"|"+p.n]) return;
@@ -2927,11 +2952,12 @@ function shApply(j){
   Object.keys(L).forEach(k=>{ L[k] = L[k].filter(x=>{ if(x.n===me) return true; old[x.n+"|"+k] = x; return !!pend[k+"|"+x.n]; }); if(!L[k].length) delete L[k]; });
   const seen = S.shSeen = S.shSeen||{}, first = !S.shSeenInit, now = {};
   rows.forEach(r=>{
-    if(r.name===me || !LVT.includes(r.code) || pend[r.date+"|"+r.name]) return;
+    const wk = r.code==="w" || r.code==="o";
+    if(r.name===me || !(LVT.includes(r.code) || wk) || pend[r.date+"|"+r.name]) return;
     const o = old[r.name+"|"+r.date], by = r.by && r.by!==r.name ? r.by : null;
     const okv = by ? true : !!r.ok || !!(o && o.t===r.code && o.ok);
-    (L[r.date] = L[r.date]||[]).push({n:r.name, t:r.code, reason:r.reason||"", by, at:r.at, ok:okv, cok:o ? !!o.cok : false, ...(o && o.okBy?{okBy:o.okBy, okAt:o.okAt}:{})});
-    if(lead && okv && !by && !r.ok){ S.okq = S.okq||{}; if(!S.okq[r.date+"|"+r.name]){ S.okq[r.date+"|"+r.name] = {date:r.date, name:r.name, okBy:(o&&o.okBy)||me, okAt:(o&&o.okAt)||Date.now()}; shFlushSoon(); } }   // 예전에 누른 확인도 서버로
+    if(!wk) (L[r.date] = L[r.date]||[]).push({n:r.name, t:r.code, reason:r.reason||"", by, at:r.at, ok:okv, cok:o ? !!o.cok : false, ...(o && o.okBy?{okBy:o.okBy, okAt:o.okAt}:{})});
+    if(!wk && lead && okv && !by && !r.ok){ S.okq = S.okq||{}; if(!S.okq[r.date+"|"+r.name]){ S.okq[r.date+"|"+r.name] = {date:r.date, name:r.name, okBy:(o&&o.okBy)||me, okAt:(o&&o.okAt)||Date.now()}; shFlushSoon(); } }   // 예전에 누른 확인도 서버로
     const sk = r.name+"|"+r.date; now[sk] = r.code+"|"+r.at;
     if(lead && !by && !first && r.date>=tk && seen[sk]!==now[sk]){ const pv = seen[sk] ? seen[sk].split("|")[0] : "";
       addNote(r.name, r.date, r.code, pv ? "change" : "add", pv); const nl = S.team.notes[S.team.notes.length-1]; if(nl) nl.reason = r.reason||""; }
@@ -2952,7 +2978,7 @@ function shApply(j){
       S.shp[r.date] = JSON.stringify([r.code, (S.memo[r.date]||{}).reason||"", r.by]);
       if(r.date===tk) toast(`조장님이 오늘 ${TST[r.code]||LBL[r.code]||r.code}로 넣었어요`); } });
   syncFromLead();
-  return before !== JSON.stringify([S.team.crew, S.team.leaves, S.rec, S.team.notes, S.team.wkp]);
+  return before !== JSON.stringify([S.team.crew, S.team.leaves, S.rec, S.team.notes, S.team.wkp, S.team.joined]);
 }
 function shRerender(){
   if(document.getElementById("dim").classList.contains("show")) return;
