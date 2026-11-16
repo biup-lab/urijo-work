@@ -1057,7 +1057,7 @@ const josa = w => ((w.charCodeAt(w.length-1)-0xAC00)%28 ? "이에요" : "예요"
 const TEST_FLAG = false;
 const TEST = TEST_FLAG && !/github\.io$/i.test(location.hostname);
 const KEY = TEST ? "teamwork2-test" : "teamwork2-v1";
-const APP_VER = "1116-1";   // 화면 맨 아래에 작게 보여요. 폰마다 새 버전인지 확인용
+const APP_VER = "1116-2";   // 화면 맨 아래에 작게 보여요. 폰마다 새 버전인지 확인용
 let VIEWAS = null;   // 관리자가 다른 사람 화면을 "보기 전용"으로 볼 때 (이때는 아무것도 저장·전송 안 해요)
 
 let S = {name:"", rec:{}, wk:{}, chk:{}};
@@ -1128,7 +1128,7 @@ function myEntry(k){ return ((S.team.leaves||{})[k]||[]).find(x=>x.n===S.name); 
 function pendCount(){ return (S.team.notes||[]).length; }
 function ago(t){ const m = Math.floor((Date.now()-t)/60000); if(m<1) return "방금"; if(m<60) return m+"분 전"; const h = Math.floor(m/60); if(h<24) return h+"시간 전"; const d = new Date(t); return `${d.getMonth()+1}월 ${d.getDate()}일`; }
 function leadOk(n,k){ const x = ((S.team.leaves||{})[k]||[]).find(o=>o.n===n); if(x && !x.by){ x.ok = true; x.okBy = S.leader||"조장"; x.okAt = Date.now();
-    if(shOn()){ S.okq = S.okq||{}; S.okq[k+"|"+n] = {date:k, name:n, okBy:x.okBy, okAt:x.okAt, tid:x.tid||""}; shFlushSoon(); } }   // 조원 폰에도 "조장 확인"이 뜨게 서버로 보내요
+    if(shOn()){ S.okq = S.okq||{}; S.okq[k+"|"+n] = {date:k, name:n, okBy:x.okBy, okAt:x.okAt, t:x.t}; SH.okErr = false; shFlushSoon(); } }   // 조원 폰에도 "조장 확인"이 뜨게 서버로 보내요
   S.team.notes = (S.team.notes||[]).filter(o=>!(o.n===n && o.k===k)); }
 function noteSheet(){
   const notes = [...(S.team.notes||[])].sort((a,b)=>b.at-a.at), sh = document.getElementById("sheet");
@@ -2594,18 +2594,19 @@ function adminMem(T, i){
 async function viewAs(T, name){
   if(!T.tid || !shOn() || !FB.m || !FB.aauth || !FB.aauth.currentUser){ toast(T.tid ? "구글 로그인 후에 볼 수 있어요" : "서버 기록이 없는 조예요"); return; }
   toast("불러오는 중…");
-  let rows = [];
+  let rows = []; const vOk = {};
   try{ const {collection, query, where, getDocs} = FB.m, months = yms(shFrom(), 6);
     // 같은 이름 조가 서버에 여러 개면 모두 읽어서 합쳐요 (같은 사람·날짜는 최신 기록)
     const tids = [...new Set([T.tid, ...((SH.all&&SH.all.teams)||[]).filter(x=>nzT(x.name)===nzT(T.name)).map(x=>x.tid)])];
     const by = {};
     for(const tid of tids){ const sn = await withTO(getDocs(query(collection(FB.adb, "u2recs"), where("tid","==",tid), where("ym","in",months))), 20000).catch(()=>null); if(!sn) continue;
       sn.docs.map(d=>d.data()).filter(r=>r.name && r.kind!=="roster").forEach(r=>{ const k = r.date+"|"+r.name; if(!by[k] || (r.at||0) > (by[k].at||0)) by[k] = r; }); }
-    rows = Object.values(by); }
+    rows = Object.values(by);
+    ((SH.all&&SH.all.teams)||[]).filter(x=>tids.includes(x.tid)).forEach(x=>Object.entries(x.oks||{}).forEach(([k,v])=>{ if(!vOk[k] || (v.at||0) > (vOk[k].at||0)) vOk[k] = v; })); }
   catch(e){ console.warn("[viewas]", e && e.message); toast("기록을 못 불러왔어요"); return; }
   const tk = todayK(), leaves = {};
   rows.forEach(r=>{ if(!LVT.includes(r.code)) return; const by = r.by && r.by!==r.name ? r.by : null;
-    (leaves[r.date] = leaves[r.date]||[]).push({n:r.name, t:r.code, reason:r.reason||"", by, at:r.at, ok:by ? true : !!r.ok, cok:!!by}); });
+    (leaves[r.date] = leaves[r.date]||[]).push({n:r.name, t:r.code, reason:r.reason||"", by, at:r.at, ok:by ? true : !!(vOk[r.date+"|"+r.name] && vOk[r.date+"|"+r.name].t===r.code), cok:!!by}); });
   const crew = T.crew.map(p=>{ const r = rows.find(x=>x.date===tk && x.name===p.n); const o = {n:p.n, r:r?r.code:""}; if(r && r.reason) o.reason = r.reason;
     ["role","sub","nat","note","fixed"].forEach(k=>{ if(p[k]) o[k] = p[k]; }); return o; });
   if(!crew.some(p=>p.n===name)) crew.push({n:name, r:""});
@@ -2811,41 +2812,40 @@ async function shFlush(){
     if(!await fbJoin()) throw new Error("no team");
     const rows = Object.values(S.shq||{}), tids = sibAct();
     if(rows.length){
-      const {writeBatch, doc} = FB.m, part = rows.slice(0, 300);
-      const send = tid => { const b = writeBatch(FB.db);
-        part.forEach(r=>b.set(doc(FB.db, "u2recs", recIdT(tid, r)), {tid, team:shTeam(), ym:r.date.slice(0,7), date:r.date, name:r.name, code:r.code||"", reason:r.reason||"", by:r.by||"", at:r.at, ...(r.chg?{ok:false}:{})}, {merge:true}));
-        return withTO(b.commit(), 15000); };
-      await send(shTid());                                                                     // 우리 조
+      // 서버 규칙이 받는 칸은 이 9개뿐이에요. 다른 칸(확인 표시 등)을 섞으면 묶음 전체가 거절돼서 기록이 멈춰요.
+      const {writeBatch, doc, setDoc} = FB.m, part = rows.slice(0, 300), denied = e => /permission/i.test(String(e && (e.code||e.message)));
+      const body = (tid, r) => ({tid, team:shTeam(), ym:r.date.slice(0,7), date:r.date, name:r.name, code:r.code||"", reason:r.reason||"", by:r.by||"", at:r.at});
+      const send = tid => { const b = writeBatch(FB.db); part.forEach(r=>b.set(doc(FB.db, "u2recs", recIdT(tid, r)), body(tid, r))); return withTO(b.commit(), 15000); };
+      const done = r => { if(S.shq[r.id] && S.shq[r.id].at===r.at) delete S.shq[r.id]; };
+      try{ await send(shTid()); part.forEach(done); SH.recErr = false; }
+      catch(e){ if(!denied(e)) throw e;
+        let bad = 0;                                                                            // 묶음이 거절되면 한 줄씩: 막힌 줄만 빼고 나머지는 보내요
+        for(const r of part){ try{ await withTO(setDoc(doc(FB.db, "u2recs", recIdT(shTid(), r)), body(shTid(), r)), 15000); done(r); }
+          catch(e2){ if(!denied(e2)) throw e2; bad++; (S.shBad = (S.shBad||[]).slice(-20)).push({id:r.id, at:Date.now()}); done(r); console.warn("[sync denied]", r.id); } }
+        SH.recErr = bad>0; }
       for(const tid of tids) if(tid!==shTid()) await send(tid).catch(e=>console.warn("[sync sib]", tid, e && e.message));   // 같은 이름의 다른 조에도
-      part.forEach(r=>{ if(S.shq[r.id] && S.shq[r.id].at===r.at) delete S.shq[r.id]; });
     }
     try{ await rosterPush(); }catch(e){ console.warn("[roster]", e && e.message); }   // 조장: 명단을 서버로
-    const oks = Object.entries(S.okq||{});                       // 조장 확인 표시 (조원 기록이 있는 조에 덧붙임)
+    const oks = Object.entries(S.okq||{});                       // 조장 확인 표시 → 조 문서에 (기록 칸에는 못 넣어요)
     if(oks.length){
-      try{ const {writeBatch, doc} = FB.m, b = writeBatch(FB.db);
-        oks.forEach(([id,o])=>b.set(doc(FB.db, "u2recs", recIdT(o.tid && tids.includes(o.tid) ? o.tid : shTid(), o)), {ok:true, okBy:o.okBy, okAt:o.okAt}, {merge:true}));
-        await withTO(b.commit(), 15000); SH.okErr = false;
-        oks.forEach(([id,o])=>{ if(S.okq[id] && S.okq[id].okAt===o.okAt) delete S.okq[id]; });
-      }catch(e){ SH.okErr = true; console.warn("[ok]", e && e.message); if(/permission/i.test(String(e && (e.code||e.message)))) S.okq = {}; }
+      const m = {}; oks.forEach(([id,o])=>{ m[o.date+"|"+o.name] = {by:o.okBy||S.name, at:o.okAt||Date.now(), t:o.t||""}; });
+      let n = 0; for(const tid of tids){ try{ await withTO(FB.m.setDoc(FB.m.doc(FB.db, "u2teams", tid), {oks:m}, {merge:true}), 15000); n++; }catch(e){ console.warn("[ok]", tid, e && e.message); } }
+      SH.okErr = !n; if(n) oks.forEach(([id,o])=>{ if(S.okq[id] && S.okq[id].okAt===o.okAt) delete S.okq[id]; });
     }
     SH.err = false; SH.last = Date.now(); shKeep();
   }catch(e){ SH.err = true; console.warn("[sync]", e && e.message); }
   SH.busy = false; shStatus();
-  if(!SH.err && (Object.keys(S.shq||{}).length || Object.keys(S.okq||{}).length)) shFlushSoon();
+  if(!SH.err && (Object.keys(S.shq||{}).length || (Object.keys(S.okq||{}).length && !SH.okErr))) shFlushSoon();
   else if(SH.err){ clearTimeout(SH.retry); SH.retry = setTimeout(shFlush, 20000); }
 }
 /* 조장 폰의 명단(이름·조장/부조장·특이사항·요일 고정)을 서버에 — 관리자·조원 화면이 같은 명단을 봐요 */
 const rosterOf = t => t.crew.map(p=>{ const o = {n:p.n}; if(p.role) o.role = p.role; if(p.sub) o.sub = true; if(p.note) o.note = p.note; if(p.fixed && Object.keys(p.fixed).length) o.fixed = p.fixed; if(p.nat) o.nat = p.nat; return o; });
 async function rosterPush(){
-  if(!isLeader() || !shTid()) return; const crew = rosterOf(S.team), ym = todayK().slice(0,7), tids = sibAct(), sig = JSON.stringify([shTeam(), crew, ym, tids]);
+  if(!isLeader() || !shTid()) return; const crew = rosterOf(S.team), tids = sibAct(), sig = JSON.stringify([shTeam(), crew, tids]);
   if(S.rosterSig===sig) return; const at = Date.now(); let ok = 0;
-  // ① 기록과 같은 칸 (조원 기록이 오가는 길이라 가장 확실해요) — 같은 이름의 조 모두에
   for(const tid of tids){
-    try{ await withTO(FB.m.setDoc(FB.m.doc(FB.db, "u2recs", tid+"_roster"), {tid, team:shTeam(), ym, date:"roster", name:"", code:"", reason:"", by:S.name, at, kind:"roster", crew}), 15000); if(tid===shTid()) ok++; }
-    catch(e){ console.warn("[roster recs]", tid, e && e.message); } }
-  // ② 조 문서
-  try{ await withTO(FB.m.setDoc(FB.m.doc(FB.db, "u2teams", shTid()), {name:shTeam(), crew, crewBy:S.name, crewAt:at, ...(S.team.own?{leaderUid:FB.auth.currentUser.uid}:{})}, {merge:true}), 15000); ok++; }
-  catch(e){ console.warn("[roster team]", e && e.message); }
+    try{ await withTO(FB.m.setDoc(FB.m.doc(FB.db, "u2teams", tid), {name:shTeam(), crew, crewBy:S.name, crewAt:at, ...(tid===shTid() && S.team.own?{leaderUid:FB.auth.currentUser.uid}:{})}, {merge:true}), 15000); ok++; }
+    catch(e){ console.warn("[roster team]", tid, e && e.message); } }
   SH.rosterErr = !ok; if(ok){ S.rosterSig = sig; shKeep(); } }
 function rosterApply(R){
   if(isLeader() || !Array.isArray(R) || !R.length) return false;
@@ -2868,18 +2868,22 @@ async function shPull(){
     const months = yms(shFrom(), 6), tids = sibAct(), key = tids.join("+")+"|"+months.join(",");
     if(FB.lk !== key){
       FB.un.forEach(u=>u()); FB.un = []; FB.lk = key;
-      const {collection, query, where, onSnapshot} = FB.m, st = {rows:{}, members:{}};
+      const {collection, query, where, onSnapshot, doc} = FB.m, st = {rows:{}, members:{}, team:{}};
       const fire = ()=>{ if(FB.lk!==key || !st.rows[shTid()] || !st.members[shTid()]) return;       // 우리 조가 오면 바로, 다른 조는 오는 대로 합쳐요
-        const best = {}; let ros = [];
-        tids.forEach(t=>(st.rows[t]||[]).forEach(r=>{ if(r.kind==="roster"){ ros.push(r); return; } if(!r.name || !r.date) return;
+        const best = {};
+        tids.forEach(t=>(st.rows[t]||[]).forEach(r=>{ if(r.kind==="roster" || !r.name || !r.date) return;
           const k = r.date+"|"+r.name; if(!best[k] || (r.at||0) > (best[k].at||0)) best[k] = {...r, _tid:t}; }));   // 같은 사람·같은 날은 최신 기록
         const mem = tids.flatMap(t=>st.members[t]||[]);
-        const changed = shApply({ok:true, rows:[...Object.values(best), ...ros], members:mem}); SH.err = false; SH.last = Date.now();
+        const T = tids.map(t=>st.team[t]).filter(Boolean), oks = {};                              // 조 문서: 조장 명단·조장 확인
+        T.forEach(d=>Object.entries(d.oks||{}).forEach(([k,v])=>{ if(!oks[k] || (v.at||0) > (oks[k].at||0)) oks[k] = v; }));
+        const rt = T.filter(d=>Array.isArray(d.crew) && d.crew.length).sort((a,b)=>(b.crewAt||0)-(a.crewAt||0))[0];
+        const changed = shApply({ok:true, rows:Object.values(best), members:mem, oks:T.length?oks:null, roster:rt?rt.crew:null}); SH.err = false; SH.last = Date.now();
         if(changed){ shKeep(); shRerender(); } shStatus(); };
       tids.forEach(tid=>{ const main = tid===shTid();
         const oops = e=>{ console.warn("[listen]", tid, e && e.message); if(main){ SH.err = true; FB.lk = ""; shStatus(); } else { (SH.sibBad = SH.sibBad||{})[tid] = 1; delete (S.fbJ||{})[tid]; } };
         FB.un.push(onSnapshot(query(collection(FB.db, "u2recs"), where("tid","==",tid), where("ym","in",months)), s=>{ st.rows[tid] = s.docs.map(d=>d.data()); fire(); }, oops));
-        FB.un.push(onSnapshot(collection(FB.db, "u2teams", tid, "members"), s=>{ st.members[tid] = s.docs.map(d=>d.data()); fire(); }, oops)); });
+        FB.un.push(onSnapshot(collection(FB.db, "u2teams", tid, "members"), s=>{ st.members[tid] = s.docs.map(d=>d.data()); fire(); }, oops));
+        FB.un.push(onSnapshot(doc(FB.db, "u2teams", tid), s=>{ st.team[tid] = s.exists() ? s.data() : {}; fire(); }, e=>console.warn("[team doc]", tid, e && e.message))); });
     }
   }catch(e){ SH.err = true; console.warn("[pull]", e && e.message); }
   SH.pulling = false; shStatus();
@@ -2949,16 +2953,17 @@ function shDiffMine(){
   if(!shOn() || !S.name || !S.team) return;
   const from = shFrom(), p = S.shp = S.shp||{}, at = S.shAt = S.shAt||{}, cur = {}, rows = [];
   Object.entries(S.rec).forEach(([k,r])=>{ if(k>=from && r) cur[k] = JSON.stringify([r, (S.memo[k]||{}).reason||"", (S.byLead||{})[k]||S.name]); });
-  Object.entries(cur).forEach(([k,v])=>{ if(p[k]!==v){ const [r,rs,by] = JSON.parse(v); const row = shRow(k, S.name, r, rs, by); if(k in p && JSON.parse(p[k])[0]!==r) row.chg = true; rows.push(row); p[k] = v; at[k] = row.at; } });
-  Object.keys(p).forEach(k=>{ if(k<from){ delete p[k]; delete at[k]; return; } if(!(k in cur)){ const row = shRow(k, S.name, ""); row.chg = true; rows.push(row); delete p[k]; at[k] = row.at; } });
+  Object.entries(cur).forEach(([k,v])=>{ if(p[k]!==v){ const [r,rs,by] = JSON.parse(v); const row = shRow(k, S.name, r, rs, by); rows.push(row); p[k] = v; at[k] = row.at; } });
+  Object.keys(p).forEach(k=>{ if(k<from){ delete p[k]; delete at[k]; return; } if(!(k in cur)){ const row = shRow(k, S.name, ""); rows.push(row); delete p[k]; at[k] = row.at; } });
   if(rows.length) shQueue(rows);
 }
 function shFlushSoon(){ if(!shOn()) return; clearTimeout(SH.timer); SH.timer = setTimeout(shFlush, 600); }
 function shApply(j){
   const before = JSON.stringify([S.team.crew, S.team.leaves, S.rec, S.team.notes, S.team.wkp, S.team.joined]);
   const me = S.name, tk = todayK(), pend = S.shq||{}, lead = isLeader();
-  const ro = (j.rows||[]).filter(r=>r.kind==="roster").sort((a,b)=>(b.at||0)-(a.at||0))[0], rows = (j.rows||[]).filter(r=>r.kind!=="roster" && r.name);
-  if(ro){ SH.gotRoster = true; rosterApply(ro.crew); }                       // 조장님 명단
+  const rows = (j.rows||[]).filter(r=>r.kind!=="roster" && r.name), OKS = j.oks||{};
+  const sok = r => { const o = OKS[r.date+"|"+r.name]; return !!(o && o.t===r.code); };       // 서버에 조장 확인이 있는지 (종류가 같을 때만)
+  if(j.roster){ SH.gotRoster = true; rosterApply(j.roster); }                // 조장님 명단
   // 명단: 시트에 있는 사람을 우리 조 목록에 추가
   const names = new Set((j.members||[]).map(m=>m.name)); rows.forEach(r=>names.add(r.name));
   S.team.joined = [...new Set((j.members||[]).map(m=>m.name).filter(Boolean))];   // 자기 폰으로 가입한 사람
@@ -2975,9 +2980,9 @@ function shApply(j){
     const wk = r.code==="w" || r.code==="o";
     if(r.name===me || !(LVT.includes(r.code) || wk) || pend[r.date+"|"+r.name]) return;
     const o = old[r.name+"|"+r.date], by = r.by && r.by!==r.name ? r.by : null;
-    const okv = by ? true : !!r.ok || !!(o && o.t===r.code && o.ok);
+    const okv = by ? true : sok(r) || !!(lead && o && o.t===r.code && o.ok);
     if(!wk) (L[r.date] = L[r.date]||[]).push({n:r.name, t:r.code, reason:r.reason||"", by, at:r.at, ok:okv, cok:o ? !!o.cok : false, ...(r._tid?{tid:r._tid}:{}), ...(o && o.okBy?{okBy:o.okBy, okAt:o.okAt}:{})});
-    if(!wk && lead && okv && !by && !r.ok){ S.okq = S.okq||{}; if(!S.okq[r.date+"|"+r.name]){ S.okq[r.date+"|"+r.name] = {date:r.date, name:r.name, okBy:(o&&o.okBy)||me, okAt:(o&&o.okAt)||Date.now(), tid:r._tid||""}; shFlushSoon(); } }   // 예전에 누른 확인도 서버로
+    if(!wk && lead && okv && !by && !sok(r) && j.oks){ S.okq = S.okq||{}; if(!S.okq[r.date+"|"+r.name]){ S.okq[r.date+"|"+r.name] = {date:r.date, name:r.name, okBy:(o&&o.okBy)||me, okAt:(o&&o.okAt)||Date.now(), t:r.code}; shFlushSoon(); } }   // 예전에 누른 확인도 서버로
     const sk = r.name+"|"+r.date; now[sk] = r.code+"|"+r.at;
     if(lead && !by && !first && r.date>=tk && seen[sk]!==now[sk]){ const pv = seen[sk] ? seen[sk].split("|")[0] : "";
       addNote(r.name, r.date, r.code, pv ? "change" : "add", pv); const nl = S.team.notes[S.team.notes.length-1]; if(nl) nl.reason = r.reason||""; }
@@ -2988,8 +2993,8 @@ function shApply(j){
   const WK = {}; rows.forEach(r=>{ if(r.code==="w" || r.code==="o") (WK[r.date] = WK[r.date]||{})[r.name] = r.code; });
   if(JSON.stringify(WK)!==JSON.stringify(S.team.wkp||{})){ S.team.wkp = WK; }
   // 조장님이 내 쉬는 날을 확인했는지 (서버 표시)
-  rows.forEach(r=>{ if(r.name!==me || !r.ok || pend[r.date+"|"+me]) return; const x = (L[r.date]||[]).find(o=>o.n===me);
-    if(x && !x.by && !x.ok && x.t===r.code){ x.ok = true; x.okBy = r.okBy||""; x.okAt = r.okAt||0; } });
+  rows.forEach(r=>{ if(r.name!==me || !sok(r) || pend[r.date+"|"+me]) return; const x = (L[r.date]||[]).find(o=>o.n===me), k = OKS[r.date+"|"+me];
+    if(x && !x.by && !x.ok && x.t===r.code){ x.ok = true; x.okBy = k.by||""; x.okAt = k.at||0; } });
   // 조장님이 나 대신 넣은 기록
   S.byLead = S.byLead||{}; S.shAt = S.shAt||{}; S.shp = S.shp||{};
   rows.forEach(r=>{ if(r.name!==me || !r.by || r.by===me || r.at<=(S.shAt[r.date]||0)) return;
@@ -3010,7 +3015,7 @@ function shStatus(){
   const el = document.getElementById("shst"); if(!el) return;
   if(!shOn()){ el.textContent = ""; return; }
   const n = Object.keys(S.shq||{}).length;
-  el.textContent = (S.name && S.team && !shTid() && !isLeader()) ? "조장님께 새 초대 링크를 받아 다시 들어와 주세요" : SH.err ? "연결이 잠시 끊겼어요 · 다시 시도할게요" : SH.rosterErr ? "명단을 서버에 못 올렸어요 · 대표님께 알려주세요" : SH.okErr ? "확인 표시를 서버에 못 올렸어요 · 대표님께 알려주세요" : (SH.busy || n) ? "저장 중…" : SH.last ? "실시간 연결됨" : "";
+  el.textContent = (S.name && S.team && !shTid() && !isLeader()) ? "조장님께 새 초대 링크를 받아 다시 들어와 주세요" : SH.err ? "연결이 잠시 끊겼어요 · 다시 시도할게요" : SH.recErr ? "기록 일부를 서버에 못 올렸어요 · 대표님께 알려주세요" : SH.rosterErr ? "명단을 서버에 못 올렸어요 · 대표님께 알려주세요" : SH.okErr ? "확인 표시를 서버에 못 올렸어요 · 대표님께 알려주세요" : (SH.busy || n) ? "저장 중…" : SH.last ? "실시간 연결됨" : "";
 }
 window.addEventListener("online", ()=>{ shFlush(); });
 setInterval(()=>{ if(document.hidden || !shOn()) return; if(view==="admin") shPullAll(); else shPull(); }, 60000);
