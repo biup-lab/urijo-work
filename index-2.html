@@ -621,7 +621,7 @@ table.st{width:100%;border-collapse:collapse;font-size:14px;min-width:560px}
 .gsteps i{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--soft);color:var(--discovery);font-style:normal;font-weight:700;font-size:13px}
 .gsteps b{display:block;margin:10px 0 4px;font-size:15px}
 .gsteps p{margin:0;font-size:13.5px;color:var(--sub);line-height:1.55;word-break:keep-all}
-.am{grid-template-columns:1fr .7fr .8fr 1.2fr 1.4fr 20px}
+.am{grid-template-columns:1fr .7fr .8fr 1.2fr 1.3fr .8fr 20px}
 .smain .sfoot{margin-top:24px;border-top:0;padding-left:0;padding-right:0}
 .smain .sfoot .sin{max-width:none;padding:0 4px}
 @media (max-width:1080px){ .slay{grid-template-columns:200px minmax(0,1fr)} .dtop{grid-template-columns:minmax(0,1fr)} }
@@ -1057,7 +1057,7 @@ const josa = w => ((w.charCodeAt(w.length-1)-0xAC00)%28 ? "이에요" : "예요"
 const TEST_FLAG = false;
 const TEST = TEST_FLAG && !/github\.io$/i.test(location.hostname);
 const KEY = TEST ? "teamwork2-test" : "teamwork2-v1";
-const APP_VER = "1113-2";   // 화면 맨 아래에 작게 보여요. 폰마다 새 버전인지 확인용
+const APP_VER = "1116-1";   // 화면 맨 아래에 작게 보여요. 폰마다 새 버전인지 확인용
 let VIEWAS = null;   // 관리자가 다른 사람 화면을 "보기 전용"으로 볼 때 (이때는 아무것도 저장·전송 안 해요)
 
 let S = {name:"", rec:{}, wk:{}, chk:{}};
@@ -1128,7 +1128,7 @@ function myEntry(k){ return ((S.team.leaves||{})[k]||[]).find(x=>x.n===S.name); 
 function pendCount(){ return (S.team.notes||[]).length; }
 function ago(t){ const m = Math.floor((Date.now()-t)/60000); if(m<1) return "방금"; if(m<60) return m+"분 전"; const h = Math.floor(m/60); if(h<24) return h+"시간 전"; const d = new Date(t); return `${d.getMonth()+1}월 ${d.getDate()}일`; }
 function leadOk(n,k){ const x = ((S.team.leaves||{})[k]||[]).find(o=>o.n===n); if(x && !x.by){ x.ok = true; x.okBy = S.leader||"조장"; x.okAt = Date.now();
-    if(shOn()){ S.okq = S.okq||{}; S.okq[k+"|"+n] = {date:k, name:n, okBy:x.okBy, okAt:x.okAt}; shFlushSoon(); } }   // 조원 폰에도 "조장 확인"이 뜨게 서버로 보내요
+    if(shOn()){ S.okq = S.okq||{}; S.okq[k+"|"+n] = {date:k, name:n, okBy:x.okBy, okAt:x.okAt, tid:x.tid||""}; shFlushSoon(); } }   // 조원 폰에도 "조장 확인"이 뜨게 서버로 보내요
   S.team.notes = (S.team.notes||[]).filter(o=>!(o.n===n && o.k===k)); }
 function noteSheet(){
   const notes = [...(S.team.notes||[])].sort((a,b)=>b.at-a.at), sh = document.getElementById("sheet");
@@ -2229,7 +2229,7 @@ const KEEP_T = "박명현조", CLEAN_AT = Date.parse("2026-11-11T07:00:00+09:00"
 function wipeMine(){ const C = S.co, T = S.team; if(!T) return;            // 이 기기의 내 조·내 기록을 비워요 (관리자 PC에서 테스트로 만든 조)
   if(T.name) C.hidden = (C.hidden||[]).filter(h=>h.name!==T.name).concat([{name:T.name, tid:T.tid||"", at:Date.now()}]);
   const t = newTeam(""); C.teams = C.teams.filter(x=>x.id!==T.id); C.teams.push(t); S.myTeam = t.id;
-  Object.assign(S, {name:"", leader:null, rec:{}, memo:{}, shq:{}, okq:{}, shp:{}, shAt:{}}); delete S.fbJoined; delete S.rosterSig; cat = "me"; }
+  Object.assign(S, {name:"", leader:null, rec:{}, memo:{}, shq:{}, okq:{}, shp:{}, shAt:{}}); delete S.fbJoined; delete S.fbJ; delete S.rosterSig; cat = "me"; }
 function cleanOld(){ const C = S.co; if(!C) return;
   if(!C.clean0){ C.clean0 = true; const T = S.team, nz0 = x=>String(x||"").replace(/\s/g,"");          // 한 번만: 이 컴퓨터가 테스트 조에 들어가 있으면 비워요
     if(T && T.name && nz0(T.name)!==nz0(KEEP_T) && Date.now() < Date.parse("2026-11-14T00:00:00+09:00")) wipeMine(); shKeep(); }
@@ -2246,7 +2246,7 @@ function admClean(){ const C = S.co; if(!C || !C.teams) return; let ch = false;
   const mine = S.team, junkMine = mine && JUNK_T(mine.name);
   const keep = C.teams.filter(t=>!JUNK_T(t.name)); if(keep.length!==C.teams.length) ch = true;
   if(junkMine){ const t = newTeam(""); keep.push(t); S.myTeam = t.id;                 // 이 컴퓨터의 테스트 기록도 비워요 (다른 조로 기록이 올라가지 않게)
-    S.name = ""; S.leader = null; S.rec = {}; S.memo = {}; S.shq = {}; S.shp = {}; S.shAt = {}; delete S.fbJoined; }
+    S.name = ""; S.leader = null; S.rec = {}; S.memo = {}; S.shq = {}; S.shp = {}; S.shAt = {}; delete S.fbJoined; delete S.fbJ; }
   C.teams = keep.filter(t=>t.id===S.myTeam || !hidT(t.name, t.tid)); if(C.teams.length!==keep.length) ch = true;   // 지운 조는 늘 안 보이게
   if(ch) shKeep(); }
 function renderAdmin(){ admClean(); cleanOld(); const all = ADM_ALL = S.co.teams; S.co.teams = all.filter(t=>t.name || t.crew.length);   // 이름 없는 빈 조(이 컴퓨터용)는 관리자 목록에서 숨겨요
@@ -2535,13 +2535,13 @@ function banModal(i){
 }
 function renderAdminTeam(){
   const C = S.co, T = C.teams.find(t=>t.id===admT), ld = lead(T), sb = T.crew.find(p=>p.sub);
-  const rows = T.crew.length ? T.crew.map((p,i)=>`<button class="arow am" data-ai="${i}"><span class="c1"><b>${esc(p.n)}</b></span><span class="c2" data-l="역할">${p.role==="leader"?'<span class="mtag">조장</span>':p.sub?'<span class="mtag">부조장</span>':'<em class="muted">조원</em>'}</span><span class="c5" data-l="국적">${p.nat?esc(p.nat):'<em class="warnt">미정</em>'}</span><span class="c3" data-l="요일 고정">${p.fixed&&fxText(p.fixed)?esc(fxText(p.fixed)):'<em class="muted">없음</em>'}</span><span class="c4" data-l="특이사항">${p.note?esc(p.note):'<em class="muted">없음</em>'}</span><span class="cgo">›</span></button>`).join("") : `<div class="adempty">아직 명단이 없어요. 위 칸에 이름을 넣어주세요.</div>`;
+  const rows = T.crew.length ? T.crew.map((p,i)=>`<button class="arow am" data-ai="${i}"><span class="c1"><b>${esc(p.n)}</b></span><span class="c2" data-l="역할">${p.role==="leader"?'<span class="mtag">조장</span>':p.sub?'<span class="mtag">부조장</span>':'<em class="muted">조원</em>'}</span><span class="c5" data-l="국적">${p.nat?esc(p.nat):'<em class="warnt">미정</em>'}</span><span class="c3" data-l="요일 고정">${p.fixed&&fxText(p.fixed)?esc(fxText(p.fixed)):'<em class="muted">없음</em>'}</span><span class="c4" data-l="특이사항">${p.note?esc(p.note):'<em class="muted">없음</em>'}</span><span class="c6" data-l="앱">${!p.seen?'<em class="muted">미가입</em>':p.ver==="old"?'<em class="muted">예전 버전</em>':`<em class="muted">${esc(p.ver)}</em>`}</span><span class="cgo">›</span></button>`).join("") : `<div class="adempty">아직 명단이 없어요. 위 칸에 이름을 넣어주세요.</div>`;
   const body = `<div class="thd"><div><button class="bk" id="adBack">‹ 반 · 조 전체</button><h2>${esc(T.name)}</h2></div><button class="rn" id="tRen">조 이름 바꾸기</button></div>
     <div class="lkpi"><div><b>${T.ban?esc(T.ban):"미정"}</b><span>소속 반</span></div><div class="${ld?"":"warn"}"><b>${ld?esc(ld.n):"미정"}</b><span>조장</span></div><div><b>${sb?esc(sb.n):"없음"}</b><span>부조장</span></div><div><b>${T.crew.length}명</b><span>인원</span></div></div>
     <div class="sgrid tm">
       <section class="spanel" id="ad-crew"><div class="sph"><span class="snum">01</span><h2>명단 ${T.crew.length}명</h2><p>이름을 누르면 조장·부조장 지정, 국적 정하기, 이름 바꾸기, 빼기를 할 수 있어요.</p></div>
         <div class="sadd"><input id="adAdd" maxlength="10" placeholder="이름"><button id="adAddB">추가</button></div>
-        <div class="athead am"><span>이름</span><span>역할</span><span>국적</span><span>요일 고정</span><span>특이사항</span><span></span></div>${rows}
+        <div class="athead am"><span>이름</span><span>역할</span><span>국적</span><span>요일 고정</span><span>특이사항</span><span>앱</span><span></span></div>${rows}
         <div class="adadd"><textarea id="adBulk" class="adta" rows="3" placeholder="여러 명을 한 번에 넣을 땐 한 줄에 한 명씩" style="margin-top:0"></textarea>
         <button class="adbtn" id="adBulkB">한 번에 넣기</button></div></section>
       <div class="scol">
@@ -2709,7 +2709,7 @@ function regModal(){
   btn.onclick = ()=>{ if(!ready()) return;
     S.name = nmi.value.trim();
     let tm = crew ? inv : tmi.value.trim(); if(tm && !/조$/.test(tm)) tm += "조";
-    S.team.name = tm; S.co.setup = true; delete S.fbJoined;
+    S.team.name = tm; S.co.setup = true; delete S.fbJoined; delete S.fbJ;
     if(crew){ if(tidq){ S.team.tid = tidq; delete S.team.own; } } else { S.team.tid = newTid(); S.team.own = true; }
     let me = S.team.crew.find(p=>p.n===S.name); if(!me){ me = {n:S.name, r:""}; S.team.crew.push(me); }
     if(!crew){ S.team.crew.forEach(p=>{ if(p!==me && p.role==="leader") delete p.role; }); me.role = "leader"; } else if(me.role==="leader") delete me.role;
@@ -2765,51 +2765,65 @@ function fbLoad(){
   return FB.p;
 }
 const withTO = (p, ms) => Promise.race([p, new Promise((_,rj)=>setTimeout(()=>rj(new Error("timeout")), ms))]);
-/* 같은 이름의 조가 서버에 여러 개면(다른 브라우저·폰에서 조장이 다시 가입한 경우) 하나로 모아요.
-   기준: 조장이 가장 최근에 명단을 올린 조. 내 기록은 그 조로 다시 보내요. */
+/* ===== 같은 이름의 조는 "한 조"로 다뤄요 =====
+   조장이 다른 브라우저·폰에서 다시 가입하면 서버에 같은 이름의 조가 하나 더 생겨서 조원이 둘로 갈렸어요.
+   폰마다 버전이 달라도(예전 버전 폰은 자기 조에만 읽고 써요) 기록이 오가도록,
+   새 버전 폰은 같은 이름의 조 "전부"에서 읽고 "전부"에 써요. 직원이 할 일은 없어요. */
 const nzT = x => String(x||"").replace(/\s/g,"");
-async function teamCanon(){
-  if(SH.canonDone || !S.team || !S.team.name) return; SH.canonDone = true;
+const sibAll = () => [...new Set([shTid(), ...((S.team && S.team.sibs)||[])].filter(Boolean))];
+const sibAct = () => sibAll().filter(t=>t===shTid() || !(SH.sibBad||{})[t]);
+const recIdT = (tid, r) => `${tid}_${r.date}_${String(r.name).replace(/\//g,"∕")}`;
+async function teamSibs(){
+  if(!S.team || !S.team.name) return; if(SH.sibAt && Date.now()-SH.sibAt < 10*60e3) return; SH.sibAt = Date.now();
   try{ const f = await fbLoad(), sn = await withTO(f.m.getDocs(f.m.collection(f.db, "u2teams")), 15000);
     const same = sn.docs.map(d=>({tid:d.id, ...d.data()})).filter(t=>nzT(t.name)===nzT(S.team.name));
     if(!same.length) return;
-    same.sort((a,b)=>(b.crewAt||0)-(a.crewAt||0) || (a.tid<b.tid?-1:1));
-    const c = same[0]; if(c.tid===S.team.tid) return;
-    if(same.length===1 && S.team.tid) return;                 // 이름이 같은 조가 하나뿐이고 이미 다른 조에 있으면 건드리지 않아요
-    const was = S.team.tid; S.team.tid = c.tid; S.team.own = c.leaderUid===f.auth.currentUser.uid;
-    delete S.fbJoined; S.shp = {}; S.shAt = {}; delete S.rosterSig; FB.lk = ""; FB.un.forEach(u=>u()); FB.un = [];
-    try{ shDiffMine(); }catch(e){}                              // 내 기록 전부를 새 조로 다시 보내요
-    console.warn("[canon] 조를 하나로 모았어요", was, "→", c.tid); shKeep();
-  }catch(e){ SH.canonDone = false; console.warn("[canon]", e && e.message); }
+    if(!S.team.tid){ same.sort((a,b)=>(b.crewAt||0)-(a.crewAt||0) || (a.tid<b.tid?-1:1));       // 새로 가입하는 조장: 새 조를 만들지 않고 있던 조로
+      S.team.tid = same[0].tid; S.team.own = same[0].leaderUid===f.auth.currentUser.uid; }
+    const next = same.map(t=>t.tid).filter(t=>t!==S.team.tid).sort(), was = JSON.stringify((S.team.sibs||[]).slice().sort());
+    if(JSON.stringify(next)!==was){ S.team.sibs = next; FB.lk = ""; S.shp = {}; S.shAt = {}; delete S.rosterSig;
+      try{ shDiffMine(); }catch(e){}                                                           // 내 기록을 형제 조에도 보내요
+      if(isLeader()){ const me = S.name; Object.entries(S.team.leaves||{}).forEach(([k,arr])=>arr.forEach(x=>{ if(x.by && x.n!==me && k>=shFrom()) shQueue([shRow(k, x.n, x.t, x.reason, x.by)]); })); }
+      console.warn("[sibs] 같은 이름 조", S.team.tid, next); }
+    shKeep();
+  }catch(e){ SH.sibAt = 0; console.warn("[sibs]", e && e.message); }
 }
-/* 조 만들기·들어가기 (한 번만) */
+/* 조 만들기·들어가기 (조마다 한 번) */
 async function fbJoin(){
   if(!S.name || !S.team || !S.team.name) return false;
-  if(!S.team.tid){ if(!isLeader()) return false; await teamCanon(); if(!S.team.tid){ S.team.tid = newTid(); S.team.own = true; } shKeep(); }
-  const f = await fbLoad(), {doc, setDoc} = f.m, uid = f.auth.currentUser.uid, role = isLeader() ? "조장" : "조원";
-  const lang = S.lang||"ko", sig = [shTid(), uid, S.name, role, shTeam(), lang].join("|");
-  if(S.fbJoined===sig) return true;
-  if(S.team.own) await withTO(setDoc(doc(f.db, "u2teams", shTid()), {name:shTeam(), leaderUid:uid, at:Date.now()}), 15000).catch(()=>{});
-  await withTO(setDoc(doc(f.db, "u2teams", shTid(), "members", uid), {name:S.name, role, team:shTeam(), tid:shTid(), lang, at:Date.now()}), 15000);
-  S.fbJoined = sig; shKeep(); return true;
+  if(!S.team.tid){ if(!isLeader()) return false; await teamSibs(); if(!S.team.tid){ S.team.tid = newTid(); S.team.own = true; } shKeep(); }
+  const f = await fbLoad(), {doc, setDoc} = f.m, uid = f.auth.currentUser.uid, role = isLeader() ? "조장" : "조원", lang = S.lang||"ko";
+  const J = S.fbJ = S.fbJ||{}; SH.sibBad = SH.sibBad||{};
+  for(const tid of sibAll()){
+    const sig = [tid, uid, S.name, role, shTeam(), lang, APP_VER].join("|"); if(J[tid]===sig) continue;
+    try{
+      if(tid===shTid() && S.team.own) await withTO(setDoc(doc(f.db, "u2teams", tid), {name:shTeam(), leaderUid:uid, at:Date.now()}, {merge:true}), 15000).catch(()=>{});
+      await withTO(setDoc(doc(f.db, "u2teams", tid, "members", uid), {name:S.name, role, team:shTeam(), tid, lang, ver:APP_VER, at:Date.now()}), 15000);
+      J[tid] = sig; delete SH.sibBad[tid];
+    }catch(e){ if(tid===shTid()) throw e; SH.sibBad[tid] = 1; console.warn("[join sib]", tid, e && e.message); }
+  }
+  shKeep(); return true;
 }
 async function shFlush(){
   if(!shOn() || SH.busy || !S.name || !S.team) return;
   SH.busy = true; shStatus();
   try{
     if(!await fbJoin()) throw new Error("no team");
-    const rows = Object.values(S.shq||{});
+    const rows = Object.values(S.shq||{}), tids = sibAct();
     if(rows.length){
-      const {writeBatch, doc} = FB.m, b = writeBatch(FB.db), part = rows.slice(0, 400);
-      part.forEach(r=>b.set(doc(FB.db, "u2recs", recId(r)), {tid:shTid(), team:shTeam(), ym:r.date.slice(0,7), date:r.date, name:r.name, code:r.code||"", reason:r.reason||"", by:r.by||"", at:r.at, ...(r.chg?{ok:false}:{})}, {merge:true}));
-      await withTO(b.commit(), 15000);
+      const {writeBatch, doc} = FB.m, part = rows.slice(0, 300);
+      const send = tid => { const b = writeBatch(FB.db);
+        part.forEach(r=>b.set(doc(FB.db, "u2recs", recIdT(tid, r)), {tid, team:shTeam(), ym:r.date.slice(0,7), date:r.date, name:r.name, code:r.code||"", reason:r.reason||"", by:r.by||"", at:r.at, ...(r.chg?{ok:false}:{})}, {merge:true}));
+        return withTO(b.commit(), 15000); };
+      await send(shTid());                                                                     // 우리 조
+      for(const tid of tids) if(tid!==shTid()) await send(tid).catch(e=>console.warn("[sync sib]", tid, e && e.message));   // 같은 이름의 다른 조에도
       part.forEach(r=>{ if(S.shq[r.id] && S.shq[r.id].at===r.at) delete S.shq[r.id]; });
     }
     try{ await rosterPush(); }catch(e){ console.warn("[roster]", e && e.message); }   // 조장: 명단을 서버로
-    const oks = Object.entries(S.okq||{});                       // 조장 확인 표시 (조원 기록에 덧붙임)
+    const oks = Object.entries(S.okq||{});                       // 조장 확인 표시 (조원 기록이 있는 조에 덧붙임)
     if(oks.length){
       try{ const {writeBatch, doc} = FB.m, b = writeBatch(FB.db);
-        oks.forEach(([id,o])=>b.set(doc(FB.db, "u2recs", recId(o)), {ok:true, okBy:o.okBy, okAt:o.okAt}, {merge:true}));
+        oks.forEach(([id,o])=>b.set(doc(FB.db, "u2recs", recIdT(o.tid && tids.includes(o.tid) ? o.tid : shTid(), o)), {ok:true, okBy:o.okBy, okAt:o.okAt}, {merge:true}));
         await withTO(b.commit(), 15000); SH.okErr = false;
         oks.forEach(([id,o])=>{ if(S.okq[id] && S.okq[id].okAt===o.okAt) delete S.okq[id]; });
       }catch(e){ SH.okErr = true; console.warn("[ok]", e && e.message); if(/permission/i.test(String(e && (e.code||e.message)))) S.okq = {}; }
@@ -2820,14 +2834,15 @@ async function shFlush(){
   if(!SH.err && (Object.keys(S.shq||{}).length || Object.keys(S.okq||{}).length)) shFlushSoon();
   else if(SH.err){ clearTimeout(SH.retry); SH.retry = setTimeout(shFlush, 20000); }
 }
-/* 조장 폰의 명단(이름·조장/부조장·특이사항·요일 고정)을 서버 조 문서에 — 관리자·조원 화면이 같은 명단을 봐요 */
+/* 조장 폰의 명단(이름·조장/부조장·특이사항·요일 고정)을 서버에 — 관리자·조원 화면이 같은 명단을 봐요 */
 const rosterOf = t => t.crew.map(p=>{ const o = {n:p.n}; if(p.role) o.role = p.role; if(p.sub) o.sub = true; if(p.note) o.note = p.note; if(p.fixed && Object.keys(p.fixed).length) o.fixed = p.fixed; if(p.nat) o.nat = p.nat; return o; });
 async function rosterPush(){
-  if(!isLeader() || !shTid()) return; const crew = rosterOf(S.team), ym = todayK().slice(0,7), sig = JSON.stringify([shTeam(), crew, ym]);
+  if(!isLeader() || !shTid()) return; const crew = rosterOf(S.team), ym = todayK().slice(0,7), tids = sibAct(), sig = JSON.stringify([shTeam(), crew, ym, tids]);
   if(S.rosterSig===sig) return; const at = Date.now(); let ok = 0;
-  // ① 기록과 같은 칸 (조원 기록이 오가는 길이라 가장 확실해요)
-  try{ await withTO(FB.m.setDoc(FB.m.doc(FB.db, "u2recs", shTid()+"_roster"), {tid:shTid(), team:shTeam(), ym, date:"roster", name:"", code:"", reason:"", by:S.name, at, kind:"roster", crew}), 15000); ok++; }
-  catch(e){ console.warn("[roster recs]", e && e.message); }
+  // ① 기록과 같은 칸 (조원 기록이 오가는 길이라 가장 확실해요) — 같은 이름의 조 모두에
+  for(const tid of tids){
+    try{ await withTO(FB.m.setDoc(FB.m.doc(FB.db, "u2recs", tid+"_roster"), {tid, team:shTeam(), ym, date:"roster", name:"", code:"", reason:"", by:S.name, at, kind:"roster", crew}), 15000); if(tid===shTid()) ok++; }
+    catch(e){ console.warn("[roster recs]", tid, e && e.message); } }
   // ② 조 문서
   try{ await withTO(FB.m.setDoc(FB.m.doc(FB.db, "u2teams", shTid()), {name:shTeam(), crew, crewBy:S.name, crewAt:at, ...(S.team.own?{leaderUid:FB.auth.currentUser.uid}:{})}, {merge:true}), 15000); ok++; }
   catch(e){ console.warn("[roster team]", e && e.message); }
@@ -2842,26 +2857,29 @@ async function rosterPull(){
   if(isLeader() || !shTid() || SH.gotRoster) return;
   const sn = await withTO(FB.m.getDoc(FB.m.doc(FB.db, "u2teams", shTid())), 15000); if(!sn.exists()) return;
   if(rosterApply((sn.data()||{}).crew)){ shKeep(); shRerender(); } }
-/* 우리 조 기록 실시간으로 듣기 → 조장 화면·달력·새 소식에 반영 */
+/* 우리 조 기록 실시간으로 듣기 (같은 이름의 조 전부) → 조장 화면·달력·새 소식에 반영 */
 async function shPull(){
   if(!shOn() || !S.name || !S.team || SH.pulling) return; SH.pulling = true;
   try{
-    await teamCanon();
+    await teamSibs();
     shFlush();
     if(!await fbJoin()) throw new Error("no team");
     mealPull(); rosterPull().catch(e=>console.warn("[roster]", e && e.message));
-    const months = yms(shFrom(), 6), key = shTid()+"|"+months.join(",");
+    const months = yms(shFrom(), 6), tids = sibAct(), key = tids.join("+")+"|"+months.join(",");
     if(FB.lk !== key){
       FB.un.forEach(u=>u()); FB.un = []; FB.lk = key;
-      const {collection, query, where, onSnapshot} = FB.m, st = {rows:null, members:null};
-      const fire = ()=>{ if(!st.rows || !st.members || FB.lk!==key) return;
-        const changed = shApply({ok:true, rows:st.rows, members:st.members}); SH.err = false; SH.last = Date.now();
+      const {collection, query, where, onSnapshot} = FB.m, st = {rows:{}, members:{}};
+      const fire = ()=>{ if(FB.lk!==key || !st.rows[shTid()] || !st.members[shTid()]) return;       // 우리 조가 오면 바로, 다른 조는 오는 대로 합쳐요
+        const best = {}; let ros = [];
+        tids.forEach(t=>(st.rows[t]||[]).forEach(r=>{ if(r.kind==="roster"){ ros.push(r); return; } if(!r.name || !r.date) return;
+          const k = r.date+"|"+r.name; if(!best[k] || (r.at||0) > (best[k].at||0)) best[k] = {...r, _tid:t}; }));   // 같은 사람·같은 날은 최신 기록
+        const mem = tids.flatMap(t=>st.members[t]||[]);
+        const changed = shApply({ok:true, rows:[...Object.values(best), ...ros], members:mem}); SH.err = false; SH.last = Date.now();
         if(changed){ shKeep(); shRerender(); } shStatus(); };
-      const oops = e=>{ console.warn("[listen]", e && e.message); SH.err = true; FB.lk = ""; shStatus(); };
-      FB.un.push(onSnapshot(query(collection(FB.db, "u2recs"), where("tid","==",shTid()), where("ym","in",months)),
-        s=>{ st.rows = s.docs.map(d=>d.data()); fire(); }, oops));
-      FB.un.push(onSnapshot(collection(FB.db, "u2teams", shTid(), "members"),
-        s=>{ st.members = s.docs.map(d=>d.data()); fire(); }, oops));
+      tids.forEach(tid=>{ const main = tid===shTid();
+        const oops = e=>{ console.warn("[listen]", tid, e && e.message); if(main){ SH.err = true; FB.lk = ""; shStatus(); } else { (SH.sibBad = SH.sibBad||{})[tid] = 1; delete (S.fbJ||{})[tid]; } };
+        FB.un.push(onSnapshot(query(collection(FB.db, "u2recs"), where("tid","==",tid), where("ym","in",months)), s=>{ st.rows[tid] = s.docs.map(d=>d.data()); fire(); }, oops));
+        FB.un.push(onSnapshot(collection(FB.db, "u2teams", tid, "members"), s=>{ st.members[tid] = s.docs.map(d=>d.data()); fire(); }, oops)); });
     }
   }catch(e){ SH.err = true; console.warn("[pull]", e && e.message); }
   SH.pulling = false; shStatus();
@@ -2884,7 +2902,8 @@ async function shPullAll(){
     SH.adSt = {at:Date.now(), who:FB.aauth.currentUser.email||"", recs:why(r), mem:why(m), tms:(why(tm) && why(r)) ? why(tm) : ""};
     if(r.status==="rejected" && m.status==="rejected") throw r.reason;
     const raw = r.status==="fulfilled" ? r.value.docs.map(d=>d.data()) : [];
-    const rows = raw.filter(x=>x.kind!=="roster" && x.name && x.date>=from && x.code), ros = raw.filter(x=>x.kind==="roster" && x.tid);
+    const bestR = {}; raw.forEach(x=>{ if(x.kind==="roster" || !x.name || !x.date) return; const k = nzT(x.team)+"|"+x.date+"|"+x.name; if(!bestR[k] || (x.at||0) > (bestR[k].at||0)) bestR[k] = x; });   // 같은 이름 조에 겹쳐 올라온 기록은 최신 것만
+    const rows = Object.values(bestR).filter(x=>x.date>=from && x.code), ros = raw.filter(x=>x.kind==="roster" && x.tid);
     const mem = m.status==="fulfilled" ? m.value.docs.map(d=>d.data()) : [];
     const tms = tm.status==="fulfilled" ? tm.value.docs.map(d=>({tid:d.id, ...d.data()})).filter(x=>x.name && !JUNK_T(x.name)) : [];
     ros.forEach(x=>{ if(JUNK_T(x.team)) return; const t = tms.find(y=>y.tid===x.tid);                       // 더 최근 명단을 써요
@@ -2898,19 +2917,20 @@ function shMergeAll(){
   if(!SH.all) return; const nz = x=>String(x||"").replace(/\s/g,""), C = S.co; let ch = false;
   const find = (tid, name)=>C.teams.find(t=>t.tid && t.tid===tid) || C.teams.find(t=>nz(t.name)===nz(name));
   const NAT = {ko:"한국", ru:"러시아", uz:"우즈베키스탄", si:"스리랑카"};      // 앱 언어로 국적 자동 (관리자가 바꾸면 그게 우선)
-  const put = (tid, team, name, role, lang)=>{ if(!team || !name) return;
+  const put = (tid, team, name, role, lang, ver, at)=>{ if(!team || !name) return;
     let t = find(tid, team); if(!t){ t = newTeam(team); if(tid) t.tid = tid; C.teams.push(t); ch = true; } else if(tid && !t.tid && t.id!==S.myTeam){ t.tid = tid; ch = true; }
     let p = t.crew.find(x=>x.n===name); if(!p){ p = {n:name, r:""}; t.crew.push(p); ch = true; }
     if(role==="조장" && !lead(t)){ p.role = "leader"; ch = true; }
-    if(!p.nat && NAT[lang]){ p.nat = NAT[lang]; ch = true; } };
+    if(!p.nat && NAT[lang]){ p.nat = NAT[lang]; ch = true; }
+    if(at && (at||0) >= (p.seen||0)){ const v = ver||"old"; if(p.ver!==v || p.seen!==at){ p.ver = v; p.seen = at; ch = true; } } };
   // 조장 폰 명단이 있으면 그 명단 그대로 (이름·조장/부조장·특이사항·요일 고정). 국적은 관리자가 정한 게 우선.
   (SH.all.teams||[]).forEach(T=>{ if(!Array.isArray(T.crew) || !T.crew.length) return;
     let t = find(T.tid, T.name); if(!t){ t = newTeam(T.name); t.tid = T.tid; C.teams.push(t); } else if(!t.tid && t.id!==S.myTeam) t.tid = T.tid;
     if(t.id===S.myTeam) return;
     const next = T.crew.map(x=>{ const o = t.crew.find(p=>p.n===x.n)||{}; const q = {n:x.n, r:o.r||""};
-      if(x.role) q.role = x.role; if(x.sub) q.sub = true; if(x.note) q.note = x.note; if(x.fixed) q.fixed = x.fixed; const nat = o.nat || x.nat; if(nat) q.nat = nat; return q; });
+      if(x.role) q.role = x.role; if(x.sub) q.sub = true; if(x.note) q.note = x.note; if(x.fixed) q.fixed = x.fixed; const nat = o.nat || x.nat; if(nat) q.nat = nat; if(o.ver){ q.ver = o.ver; q.seen = o.seen; } return q; });
     if(JSON.stringify(next)!==JSON.stringify(t.crew)){ t.crew = next; ch = true; } });
-  (SH.all.members||[]).forEach(m=>put(m.tid, m.team, m.name, m.role, m.lang));
+  (SH.all.members||[]).forEach(m=>put(m.tid, m.team, m.name, m.role, m.lang, m.ver, m.at));
   (SH.all.rows||[]).forEach(r=>put(r.tid, r.team, r.name));
   if(ch) shKeep();
 }
@@ -2956,8 +2976,8 @@ function shApply(j){
     if(r.name===me || !(LVT.includes(r.code) || wk) || pend[r.date+"|"+r.name]) return;
     const o = old[r.name+"|"+r.date], by = r.by && r.by!==r.name ? r.by : null;
     const okv = by ? true : !!r.ok || !!(o && o.t===r.code && o.ok);
-    if(!wk) (L[r.date] = L[r.date]||[]).push({n:r.name, t:r.code, reason:r.reason||"", by, at:r.at, ok:okv, cok:o ? !!o.cok : false, ...(o && o.okBy?{okBy:o.okBy, okAt:o.okAt}:{})});
-    if(!wk && lead && okv && !by && !r.ok){ S.okq = S.okq||{}; if(!S.okq[r.date+"|"+r.name]){ S.okq[r.date+"|"+r.name] = {date:r.date, name:r.name, okBy:(o&&o.okBy)||me, okAt:(o&&o.okAt)||Date.now()}; shFlushSoon(); } }   // 예전에 누른 확인도 서버로
+    if(!wk) (L[r.date] = L[r.date]||[]).push({n:r.name, t:r.code, reason:r.reason||"", by, at:r.at, ok:okv, cok:o ? !!o.cok : false, ...(r._tid?{tid:r._tid}:{}), ...(o && o.okBy?{okBy:o.okBy, okAt:o.okAt}:{})});
+    if(!wk && lead && okv && !by && !r.ok){ S.okq = S.okq||{}; if(!S.okq[r.date+"|"+r.name]){ S.okq[r.date+"|"+r.name] = {date:r.date, name:r.name, okBy:(o&&o.okBy)||me, okAt:(o&&o.okAt)||Date.now(), tid:r._tid||""}; shFlushSoon(); } }   // 예전에 누른 확인도 서버로
     const sk = r.name+"|"+r.date; now[sk] = r.code+"|"+r.at;
     if(lead && !by && !first && r.date>=tk && seen[sk]!==now[sk]){ const pv = seen[sk] ? seen[sk].split("|")[0] : "";
       addNote(r.name, r.date, r.code, pv ? "change" : "add", pv); const nl = S.team.notes[S.team.notes.length-1]; if(nl) nl.reason = r.reason||""; }
