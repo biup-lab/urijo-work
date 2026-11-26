@@ -715,6 +715,28 @@ table.st{width:100%;border-collapse:collapse;font-size:14px;min-width:560px}
 .tcard .wx{margin-bottom:30px}
 .tdh{font-size:22px;font-weight:700;letter-spacing:-.02em;margin:0 0 28px;color:var(--text)}
 .tdh+.qsub{margin:-18px 0 26px}
+main{touch-action:pan-y}
+@keyframes slr{from{transform:translateX(36px);opacity:.2}to{transform:none;opacity:1}}
+@keyframes sll{from{transform:translateX(-36px);opacity:.2}to{transform:none;opacity:1}}
+.sl-r{animation:slr .22s ease-out} .sl-l{animation:sll .22s ease-out}
+@media (prefers-reduced-motion:reduce){ .sl-r,.sl-l{animation:none} }
+.rem{position:fixed;inset:0;z-index:60;background:rgba(0,20,50,.45);display:none;align-items:center;justify-content:center;padding:24px 20px}
+.rem.show{display:flex;animation:remf .18s ease-out}
+@keyframes remf{from{opacity:0}to{opacity:1}}
+.remc{width:100%;max-width:360px;background:var(--card);border-radius:22px;padding:26px 20px 16px;text-align:center;box-shadow:0 24px 48px -20px rgba(0,20,50,.5)}
+.remc h3{margin:0 0 6px;font-size:19px;letter-spacing:-.02em}
+.remc>p{margin:0 0 18px;font-size:13.5px;color:var(--sub)}
+.reml{text-align:left;border:1px solid var(--line);border-radius:14px;padding:2px 14px;margin-bottom:18px;max-height:40vh;overflow:auto}
+.reml>div{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.reml>div:last-child{border-bottom:0}
+.remd{font-size:12px;color:var(--sub);line-height:1.35}
+.remd b{display:block;font-size:14px;color:var(--discovery)}
+.remn{font-size:16px;font-weight:700}
+.remk{font-size:13px;color:var(--sub);white-space:nowrap}
+.remok{width:100%;border:0;background:var(--discovery);color:#fff;border-radius:14px;padding:14px;font-size:16px;font-weight:700}
+.remlater{border:0;background:none;color:var(--sub);font-size:13px;padding:12px 6px 4px}
+.upc{display:block;width:100%;text-align:left;border:0;background:none;padding:2px 2px 12px;font-size:13px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.upc b{color:var(--discovery);font-weight:600}
 [hidden]{display:none!important}
 
 /* ===== 디자인 검토 반영 ===== */
@@ -1030,6 +1052,7 @@ body.wide{padding-bottom:0}
 <input type="file" id="cam" accept="image/*" capture="environment" hidden>
 <div class="dim" id="dim"><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
 <div class="viewer" id="viewer"><img id="vimg" alt="회사 출근표 사진"></div>
+<div class="rem" id="rem"></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1057,7 +1080,7 @@ const josa = w => ((w.charCodeAt(w.length-1)-0xAC00)%28 ? "이에요" : "예요"
 const TEST_FLAG = false;
 const TEST = TEST_FLAG && !/github\.io$/i.test(location.hostname);
 const KEY = TEST ? "teamwork2-test" : "teamwork2-v1";
-const APP_VER = "1116-2";   // 화면 맨 아래에 작게 보여요. 폰마다 새 버전인지 확인용
+const APP_VER = "1126-1";   // 화면 맨 아래에 작게 보여요. 폰마다 새 버전인지 확인용
 let VIEWAS = null;   // 관리자가 다른 사람 화면을 "보기 전용"으로 볼 때 (이때는 아무것도 저장·전송 안 해요)
 
 let S = {name:"", rec:{}, wk:{}, chk:{}};
@@ -1695,7 +1718,7 @@ function teamToday(){
   }).join("");
   const sb = L.find(p=>p.sub);
   return `
-    ${allBan()}
+    ${allBan()}${remStrip()}
     <div class="tmain"><div class="tmh"><b>오늘 누가 몇 시에 퇴근하나요</b><span>${L.length}명 중 ${L.length-c.n}명 체크</span></div>${rows}</div>
     <div class="tsend">
       <p>${c.n?`아직 <em>${c.n}명</em>이 체크 전이에요. 다 모이면 반장님께 보내주세요.`:"모두 체크했어요. 반장님께 보내면 끝이에요."}</p>
@@ -1827,6 +1850,7 @@ function bindTeam(){
   if(q("img")) q("img").onclick = tImg;
   if(q("nban")) q("nban").onclick = noteSheet;
   if(q("bulk")) q("bulk").onclick = bulkModal;
+  if(q("upc")) q("upc").onclick = ()=>{ tsub = "month"; go("team"); };
   if(q("logout")) q("logout").onclick = ()=>{ S.leader = null; cat = "me"; save(); applyRole(); go("today"); toast("로그아웃했어요"); };
   if(q("share")) q("share").onclick = ()=>tText(tShare(), "조 단톡방에 보낼 문구");
   if(q("nudge")) q("nudge").onclick = ()=>tText(`${members().filter(p=>p.r==="").map(p=>p.n).join(", ")}님, 오늘 몇 시 퇴근 가능한지 앱에서 체크 부탁드려요.`, "아직 체크 안 한 사람");
@@ -3006,6 +3030,7 @@ function shApply(j){
   return before !== JSON.stringify([S.team.crew, S.team.leaves, S.rec, S.team.notes, S.team.wkp, S.team.joined]);
 }
 function shRerender(){
+  setTimeout(()=>{ try{ remCheck(); }catch(e){} }, 400);
   if(document.getElementById("dim").classList.contains("show")) return;
   const y = window.scrollY; applyRole();
   if(view==="team") renderTeam(); else if(view==="today") renderToday(); else if(view==="leave") renderLeave(); else if(view==="sheet") renderSheet();
@@ -3174,6 +3199,87 @@ function updApply(){
 }
 setTimeout(updCheck, 4000); setInterval(()=>{ if(!document.hidden) updCheck(); }, 600000);
 document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) updCheck(); });
+
+/* ===== 쉬는 날 미리 알림 (영업일 2일 전부터, 조장·부조장에게 가운데 팝업) =====
+   월요일에 쉬면 목요일부터 떠요(주말·빨간날은 건너뛰고 셈). [확인했어요]를 누를 때까지 앱을 열 때마다 다시 떠요.
+   확인 기록(S.remAck)은 이 폰에만 저장돼요 — 서버로 보내지 않아요. */
+const REMT = ["m","a","h","l","x"];
+function remWindow(){ const t0 = new Date(), out = [{d:t0, i:0}]; let wd = 0;
+  for(let i=1;i<=10 && wd<2;i++){ const d = mk(t0.getFullYear(), t0.getMonth(), t0.getDate()+i); out.push({d, i}); if(!isRest(d, ymd(d))) wd++; }
+  return out; }
+function remDayLabel(w){ return w.i===0 ? "오늘" : w.i===1 ? "내일" : w.i===2 ? "모레" : `${DOW[w.d.getDay()]}요일`; }
+function remUpcoming(){
+  if(!S.name || !S.co || !S.co.setup || !S.team) return [];
+  const out = [];
+  remWindow().forEach(w=>{ const k = ymd(w.d);
+    teamLeaves(w.d.getFullYear(), w.d.getMonth()).filter(x=>x.k===k && x.n!==S.name && !x.me && REMT.includes(x.t))
+      .forEach(x=>{ if(!out.some(o=>o.k===k && o.n===x.n)) out.push({...x, w, key:k+"|"+x.n+"|"+x.t}); }); });
+  return out; }
+let remSnooze = "";
+function remCheck(){
+  if(VIEWAS || !isLeader() || view==="admin") return;
+  const el = document.getElementById("rem");
+  if(!el || el.classList.contains("show") || document.getElementById("dim").classList.contains("show")) return;
+  const ack = S.remAck||{}, L = remUpcoming().filter(x=>!ack[x.key]); if(!L.length) return;
+  const sig = L.map(x=>x.key).join(","); if(sig===remSnooze) return;
+  el.innerHTML = `<div class="remc" role="dialog" aria-modal="true" aria-labelledby="remt">
+    <h3 id="remt">곧 쉬는 조원이 있어요</h3><p>미리 일을 나눠두세요.</p>
+    <div class="reml">${L.map(x=>`<div><span class="remd"><b>${remDayLabel(x.w)}</b>${x.w.d.getMonth()+1}/${x.w.d.getDate()} ${DOW[x.w.d.getDay()]}</span><span class="remn">${esc(x.n)}</span><span class="remk">${LBL[x.t]||x.t}${x.reason?` · ${esc(x.reason)}`:""}</span></div>`).join("")}</div>
+    <button class="remok" id="remOk">확인했어요</button>
+    <button class="remlater" id="remLater">나중에 다시 알려주세요</button></div>`;
+  el.classList.add("show");
+  document.getElementById("remOk").onclick = ()=>{ S.remAck = S.remAck||{}; const t = new Date(), lim = ymd(mk(t.getFullYear(), t.getMonth(), t.getDate()-7));
+    Object.keys(S.remAck).forEach(k=>{ if(k.slice(0,10)<lim) delete S.remAck[k]; }); L.forEach(x=>S.remAck[x.key] = Date.now());
+    el.classList.remove("show"); shKeep(); if(view==="team") renderTeam(); toast("확인했어요"); };
+  document.getElementById("remLater").onclick = ()=>{ remSnooze = sig; el.classList.remove("show"); };
+}
+function remStrip(){
+  if(!isLeader()) return ""; const L = remUpcoming(); if(!L.length) return "";
+  return `<button class="upc" id="upc">다가오는 쉬는 날 · ${L.map(x=>`${remDayLabel(x.w)} <b>${esc(x.n)}</b> ${LBL[x.t]}`).join(", ")} ›</button>`; }
+
+/* ===== 옆으로 밀어서 화면 넘기기 (하단 탭도 그대로) ===== */
+const PAGES = {me:["today","leave","sheet"], team:["today","month","mng"]};
+function pgList(){ return cat==="team" ? PAGES.team : PAGES.me; }
+function pgIdx(){ return cat==="team" ? PAGES.team.indexOf(tsub) : PAGES.me.indexOf(view); }
+function pgGo(i, dir){
+  const sec = document.getElementById("v-"+view);
+  if(cat==="team"){ tsub = PAGES.team[i]; go("team"); } else go(PAGES.me[i]);
+  const nsec = document.getElementById("v-"+view);
+  [sec, nsec].forEach(s=>{ s.style.transition = ""; s.style.transform = ""; s.style.opacity = ""; });
+  nsec.classList.remove("sl-l","sl-r"); void nsec.offsetWidth; nsec.classList.add(dir>0 ? "sl-r" : "sl-l");
+}
+(()=>{
+  const M = document.querySelector("main"); if(!M) return;
+  let x0 = null, y0 = 0, t0 = 0, lock = null, sec = null;
+  const shut = ()=> document.getElementById("dim").classList.contains("show") || document.getElementById("rem").classList.contains("show");
+  M.addEventListener("touchstart", e=>{
+    x0 = null;
+    if(view==="admin" || e.touches.length>1 || shut() || e.target.closest("input,textarea,select,.tblw,.snav,.stabs2")) return;
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now(); lock = null; sec = document.getElementById("v-"+view);
+  }, {passive:true});
+  M.addEventListener("touchmove", e=>{
+    if(x0===null) return;
+    const dx = e.touches[0].clientX-x0, dy = e.touches[0].clientY-y0;
+    if(lock===null && (Math.abs(dx)>12 || Math.abs(dy)>12)) lock = Math.abs(dx) > Math.abs(dy)*1.3 ? "x" : "y";
+    if(lock!=="x") return;
+    const i = pgIdx(), n = pgList().length, edge = (dx>0 && i<=0) || (dx<0 && i>=n-1);
+    sec.style.transition = "none"; sec.style.transform = `translateX(${edge ? dx*.2 : dx*.9}px)`; sec.style.opacity = edge ? 1 : Math.max(.4, 1-Math.abs(dx)/600);
+  }, {passive:true});
+  M.addEventListener("touchend", e=>{
+    if(x0===null || lock!=="x"){ x0 = null; return; }
+    const dx = e.changedTouches[0].clientX-x0, sp = Math.abs(dx)/Math.max(1, Date.now()-t0), i = pgIdx(), n = pgList().length, s = sec; x0 = null;
+    const dir = dx<0 ? 1 : -1, ni = i+dir;
+    if((Math.abs(dx)>70 || (sp>.45 && Math.abs(dx)>30)) && i>=0 && ni>=0 && ni<n){
+      s.style.transition = "transform .14s ease-in, opacity .14s"; s.style.transform = `translateX(${dir>0?-40:40}%)`; s.style.opacity = "0";
+      setTimeout(()=>pgGo(ni, dir), 130);
+      if(!S.swHint){ S.swHint = 1; shKeep(); }
+    } else { s.style.transition = "transform .2s ease-out, opacity .2s"; s.style.transform = ""; s.style.opacity = ""; }
+  });
+  M.addEventListener("touchcancel", ()=>{ if(sec){ sec.style.transform = ""; sec.style.opacity = ""; } x0 = null; });
+})();
+setTimeout(()=>{ try{ remCheck(); }catch(e){} }, 900);
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) setTimeout(()=>{ try{ remCheck(); }catch(e){} }, 900); });
+if(S.name && !S.swHint) setTimeout(()=>toast("화면을 옆으로 밀면 다음 페이지로 넘어가요"), 1800);
 if(location.hash==="#admin") checkHash(); else if(!S.name) regModal(); else checkHash();
 </script>
 </body>
