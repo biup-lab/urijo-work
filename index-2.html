@@ -735,6 +735,7 @@ main{touch-action:pan-y}
 .remk{font-size:13px;color:var(--sub);white-space:nowrap}
 .remok{width:100%;border:0;background:var(--discovery);color:#fff;border-radius:14px;padding:14px;font-size:16px;font-weight:700}
 .remlater{border:0;background:none;color:var(--sub);font-size:13px;padding:12px 6px 4px}
+.pick.wk .big{font-size:clamp(22px,7.4vw,32px);white-space:nowrap;letter-spacing:-.03em}
 .upc{display:block;width:100%;text-align:left;border:0;background:none;padding:2px 2px 12px;font-size:13px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .upc b{color:var(--discovery);font-weight:600}
 [hidden]{display:none!important}
@@ -1080,7 +1081,7 @@ const josa = w => ((w.charCodeAt(w.length-1)-0xAC00)%28 ? "이에요" : "예요"
 const TEST_FLAG = false;
 const TEST = TEST_FLAG && !/github\.io$/i.test(location.hostname);
 const KEY = TEST ? "teamwork2-test" : "teamwork2-v1";
-const APP_VER = "1126-1";   // 화면 맨 아래에 작게 보여요. 폰마다 새 버전인지 확인용
+const APP_VER = "1128-1";   // 화면 맨 아래에 작게 보여요. 폰마다 새 버전인지 확인용
 let VIEWAS = null;   // 관리자가 다른 사람 화면을 "보기 전용"으로 볼 때 (이때는 아무것도 저장·전송 안 해요)
 
 let S = {name:"", rec:{}, wk:{}, chk:{}};
@@ -1244,7 +1245,10 @@ function renderToday(){
   if(r==="m"||r==="a"||r==="x"||r==="l"){
     inner = `<div class="td">${dl}</div><h1 class="q">오늘은 ${LBL[r]}${josa(LBL[r])}</h1><p class="qsub">${r==="x"||r==="l"?"몸 잘 챙기세요. 나오게 되셨다면 아래 버튼을 눌러주세요.":"푹 쉬세요. 출근하게 되셨다면 아래 버튼을 눌러주세요."}</p><button class="etc" id="undoLv">${LBL[r]} 취소하고 퇴근 시간 고르기</button>`;
   } else if(isRest(d,k) && r!=="5" && r!=="6"){
-    inner = `<div class="td">${dl}</div><h1 class="q">${h?"오늘은 "+h[0]+"이에요":"오늘은 "+(dw===6?"토요일":"일요일")+"이에요"}</h1><p class="qsub">${r==="w"?"출근으로 체크돼 있어요. 주말·공휴일은 5시 퇴근이에요.":"주말 출근은 쉬는 날 계획 탭에서 미리 체크할 수 있어요."}</p>`;
+    inner = `${wxHTML()}${mealHTML()}${allBan()}${leadOffToday()}<h1 class="tdh">${dl}${h?` · ${h[0]}`:""}</h1>
+    <div class="pick wk">
+      <button class="pbtn ${r==="w"?"on":""}" data-t="w"><span class="big">출근했어요</span><span class="small">${dw===0?"출근 체크":"5시 퇴근"}</span></button>
+      <button class="pbtn ${r==="o"?"on":""}" data-t="o"><span class="big">쉬었어요</span><span class="small">출근 안 함</span></button></div>`;
   } else {
     inner = `${wxHTML()}${mealHTML()}${allBan()}${leadOffToday()}<h1 class="tdh">${dl}</h1>${r==="h"?`<p class="qsub">오늘은 반차예요</p>`:r==="e"?`<p class="qsub">오늘 ${((S.memo[k]||{}).out>12?(S.memo[k]||{}).out-12:(S.memo[k]||{}).out)}시 조퇴로 체크돼 있어요</p>`:""}
     ${r==="h"?"":`<div class="pick">
